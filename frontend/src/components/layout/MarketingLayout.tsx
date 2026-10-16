@@ -42,7 +42,7 @@ export const MarketingLayout: React.FC = () => {
 
       <footer className="border-t border-[var(--border)] px-6 py-8 text-xs text-[var(--muted)] flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          &copy; 2026 TweetSense. Built for the DeepCoreX Full-stack application.
+          &copy; 2026 TweetSense. Production AI Feedback Intelligence Platform.
         </div>
         <div className="flex gap-4">
           <Link to="/model" className="hover:underline">Methodology & Limits</Link>

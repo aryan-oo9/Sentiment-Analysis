@@ -1,16 +1,31 @@
+import csv
+import io
 import secrets
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
-from ..models import User, Project, Comment, Analysis
+from ..models import User, Project, Comment, Analysis, Correction
 from ..schemas import ProjectCreateSchema, ProjectUpdateSchema
 from ..auth import get_current_user
 
 project_router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+def escape_csv_cell(val: any) -> str:
+    """
+    Prevent CSV formula injection (CSV macro / DDE injection).
+    If a cell value starts with '=', '+', '-', '@', '\t', or '\r',
+    prefix it with an apostrophe (') so spreadsheet software treats it as a text literal.
+    """
+    if val is None:
+        return ""
+    s = str(val)
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + s
+    return s
 
 class ShareToggleSchema(BaseModel):
     enabled: Optional[bool] = True
@@ -203,3 +218,61 @@ def toggle_share_token(project_id: int, body: ShareToggleSchema = ShareToggleSch
             "share_url": f"/r/{project.share_token}" if project.share_token else None
         }
     }
+
+@project_router.get("/{project_id}/export.csv")
+def export_project_csv(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
+    ).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+
+    comments = db.query(Comment).filter(
+        Comment.project_id == project_id
+    ).order_by(Comment.created_at.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+
+    # Required columns: comment, source, date, sentiment, confidence, priority, corrected label
+    headers = ["comment", "source", "date", "sentiment", "confidence", "priority", "corrected label"]
+    writer.writerow(headers)
+
+    for c in comments:
+        dt = c.posted_at.isoformat() if c.posted_at else (c.created_at.isoformat() if c.created_at else "")
+        sent = c.analysis.sentiment if c.analysis else ""
+        conf = f"{c.analysis.confidence:.3f}" if (c.analysis and c.analysis.confidence is not None) else ""
+        prio = c.analysis.priority if c.analysis else ""
+        corr = c.correction.corrected_sentiment if c.correction else ""
+
+        row = [
+            escape_csv_cell(c.text),
+            escape_csv_cell(c.source),
+            escape_csv_cell(dt),
+            escape_csv_cell(sent),
+            escape_csv_cell(conf),
+            escape_csv_cell(prio),
+            escape_csv_cell(corr),
+        ]
+        writer.writerow(row)
+
+    csv_data = output.getvalue()
+    filename = f"project_{project_id}_export.csv"
+
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
+

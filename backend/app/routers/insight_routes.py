@@ -2,7 +2,7 @@ import math
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from ..database import get_db
@@ -27,7 +27,12 @@ def get_project_stats(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    comments = db.query(Comment).join(Analysis).filter(Comment.project_id == project.id).all()
+    comments = (
+        db.query(Comment)
+        .options(joinedload(Comment.analysis))
+        .filter(Comment.project_id == project.id)
+        .all()
+    )
     total_comments = len(comments)
 
     if total_comments == 0:
@@ -73,7 +78,13 @@ def get_project_stats(
     low_pri = sum(1 for c in comments if c.analysis and c.analysis.priority == "Low Priority")
 
     # Agreement rate on reviewed comments
-    corrections = db.query(Correction).join(Comment).filter(Comment.project_id == project.id).all()
+    corrections = (
+        db.query(Correction)
+        .options(joinedload(Correction.comment).joinedload(Comment.analysis))
+        .join(Comment)
+        .filter(Comment.project_id == project.id)
+        .all()
+    )
     reviewed_count = len(corrections)
     agreements = 0
     for corr in corrections:
@@ -170,7 +181,13 @@ def get_executive_briefing(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    comments = db.query(Comment).filter(Comment.project_id == project.id).order_by(Comment.created_at.desc()).all()
+    comments = (
+        db.query(Comment)
+        .options(joinedload(Comment.analysis))
+        .filter(Comment.project_id == project.id)
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
     total = len(comments)
     if total == 0:
         return {

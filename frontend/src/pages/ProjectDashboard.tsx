@@ -85,8 +85,17 @@ export const ProjectDashboard: React.FC = () => {
 
   if (loading || !project || !stats) {
     return (
-      <div className="p-12 text-center text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-        Loading dashboard...
+      <div className="p-8 max-w-6xl mx-auto space-y-12 w-full animate-pulse">
+        <div className="border-b-2 border-[var(--ink)] pb-6 space-y-3">
+          <div className="h-3 bg-[var(--border)] w-32"></div>
+          <div className="h-10 bg-[var(--border)] w-3/4 max-w-md"></div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="border border-[var(--border)] p-6 h-32 bg-[var(--card)]"></div>
+          ))}
+        </div>
+        <div className="border border-[var(--border)] p-6 h-72 bg-[var(--card)]"></div>
       </div>
     );
   }

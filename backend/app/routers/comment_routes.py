@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 
 from ..database import get_db
@@ -230,7 +230,17 @@ def list_comments(
         q = q.filter(Comment.text.ilike(f"%{search.strip()}%"))
 
     total_items = q.count()
-    comments = q.order_by(Comment.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    comments = (
+        q.options(
+            joinedload(Comment.analysis),
+            joinedload(Comment.correction),
+            joinedload(Comment.ticket)
+        )
+        .order_by(Comment.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
 
     items = []
     for c in comments:

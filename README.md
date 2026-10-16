@@ -10,9 +10,9 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-- **Live Application**: [https://tweetsense.vercel.app](https://tweetsense.vercel.app)
+- **Live Application**: [https://sentiment-analysis-nine-zeta.vercel.app](https://sentiment-analysis-nine-zeta.vercel.app)
 - **Production API**: [https://sentiment-analysis-tm33.onrender.com](https://sentiment-analysis-tm33.onrender.com)
-- **Empirical Model Card**: [https://tweetsense.vercel.app/model-card](https://tweetsense.vercel.app/model-card)
+- **Empirical Model Card**: [https://sentiment-analysis-nine-zeta.vercel.app/model-card](https://sentiment-analysis-nine-zeta.vercel.app/model-card)
 - **Architecture Guide**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 TweetSense transforms raw customer comments into structured, prioritized feedback intelligence. It computes sentiment with linear model interpretability (exact word-level coefficient attribution), enforces an empirical neutral deadband, triages urgent inquiries through a tiered fallback engine, and clusters emerging product themes.

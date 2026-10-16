@@ -25,4 +25,4 @@ ENV FLASK_DEBUG=false
 EXPOSE 5000
 
 # Start with gunicorn (1 worker, 120s timeout for model stability)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "run:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 120 run:app"]

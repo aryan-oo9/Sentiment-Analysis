@@ -18,7 +18,10 @@ class Config:
     ]
     
     # Database
-    DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'tweetsense.db'}")
+    _raw_db_url = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'tweetsense.db'}")
+    if _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = _raw_db_url
     
     # Authentication
     JWT_SECRET = os.getenv("JWT_SECRET", "tweetsense-v2-dev-secret-key-change-in-prod")

@@ -1,0 +1,11 @@
+*.csv
+training.1600000.processed.noemoticon.csv
+twitter_data_lemmatized.csv
+*.db
+*.sqlite*
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.git/
+tests/

@@ -1,6 +1,10 @@
 import type { ApiResponse } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? "https://sentiment-analysis-tm33.onrender.com"
+    : "http://localhost:5000");
 
 class ApiClient {
   private getToken(): string | null {

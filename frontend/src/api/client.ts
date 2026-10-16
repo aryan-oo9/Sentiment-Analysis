@@ -208,6 +208,42 @@ class ApiClient {
   async getSharedReport(token: string) {
     return this.request<any>(`/api/share/${token}`, { method: "GET" });
   }
+
+  // Export
+  async exportCsv(projectId: number): Promise<Blob> {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const url = `${BASE_URL}/api/projects/${projectId}/export.csv`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw new Error(`Export failed with HTTP ${res.status}`);
+    }
+    return res.blob();
+  }
+
+  async downloadExportCsv(projectId: number, filename?: string) {
+    const blob = await this.exportCsv(projectId);
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = filename || `project_${projectId}_export.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(downloadUrl);
+  }
+
+  // Pull Sources
+  async pullHn(projectId: number, query: string, limit: number = 20) {
+    return this.request<{ ingested_count: number; items: any[] }>(`/api/projects/${projectId}/pull`, {
+      method: "POST",
+      body: JSON.stringify({ source: "hn", query, limit }),
+    });
+  }
 }
 
 export const api = new ApiClient();
+

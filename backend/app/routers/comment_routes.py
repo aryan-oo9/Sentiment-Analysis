@@ -1,34 +1,34 @@
 import io
 from datetime import datetime, timezone
+from typing import Optional
 import pandas as pd
-from flask import Blueprint, request, jsonify
-from pydantic import ValidationError
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
+from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from ..models import Project, Comment, Analysis, Correction, Ticket
+
+from ..database import get_db
+from ..models import User, Project, Comment, Analysis, Correction, Ticket
 from ..schemas import IngestCommentsSchema, CorrectionSchema, TicketUpdateSchema
-from ..auth import require_auth
+from ..auth import get_current_user
 from ..ml import ml_engine
 from ..llm import llm_service
 
-comment_bp = Blueprint("comments", __name__)
+comment_router = APIRouter(prefix="/api", tags=["comments"])
 
-@comment_bp.route("/api/projects/<int:project_id>/comments", methods=["POST"])
-@require_auth
-def ingest_pasted_comments(current_user, db, project_id):
+@comment_router.post("/projects/{project_id}/comments", status_code=201)
+def ingest_pasted_comments(
+    project_id: int,
+    data: IngestCommentsSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
-
-    try:
-        data = IngestCommentsSchema(**request.get_json(force=True))
-    except ValidationError as e:
-        return jsonify({"status": "error", "message": e.errors()[0]["msg"], "data": None}), 400
-    except Exception:
-        return jsonify({"status": "error", "message": "Invalid JSON body", "data": None}), 400
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     saved_items = []
     for item in data.comments:
@@ -83,42 +83,44 @@ def ingest_pasted_comments(current_user, db, project_id):
 
     db.commit()
 
-    return jsonify({
+    return {
         "status": "success",
         "message": f"{len(saved_items)} comments analyzed and saved",
         "data": {
             "ingested_count": len(saved_items),
             "comments": saved_items
         }
-    }), 201
+    }
 
-@comment_bp.route("/api/projects/<int:project_id>/import", methods=["POST"])
-@require_auth
-def import_csv_comments(current_user, db, project_id):
+@comment_router.post("/projects/{project_id}/import", status_code=201)
+async def import_csv_comments(
+    project_id: int,
+    file: UploadFile = File(...),
+    text_column: Optional[str] = Form(None),
+    source_column: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
-
-    if "file" not in request.files:
-        return jsonify({"status": "error", "message": "CSV file is required (multipart 'file')", "data": None}), 400
-
-    file = request.files["file"]
-    text_col = request.form.get("text_column", "").strip()
-    source_col = request.form.get("source_column", "").strip()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     if not file.filename.lower().endswith(".csv"):
-        return jsonify({"status": "error", "message": "Only .csv files are supported", "data": None}), 400
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files are supported")
 
+    content = await file.read()
     try:
-        df = pd.read_csv(file)
+        df = pd.read_csv(io.BytesIO(content))
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Unable to parse CSV: {str(e)}", "data": None}), 400
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to parse CSV: {str(e)}")
 
-    # Auto-detect text column if not specified
+    text_col = (text_column or "").strip()
+    source_col = (source_column or "").strip()
+
     if not text_col:
         candidates = ["text", "comment", "tweet", "feedback", "body", "message"]
         for col in df.columns:
@@ -129,20 +131,17 @@ def import_csv_comments(current_user, db, project_id):
             text_col = df.columns[0]
 
     if text_col not in df.columns:
-        return jsonify({
-            "status": "error",
-            "message": f"Column '{text_col}' not found in CSV. Available columns: {list(df.columns)}",
-            "data": None
-        }), 400
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Column '{text_col}' not found in CSV. Available columns: {list(df.columns)}"
+        )
 
-    # Enforce batch size limit of 500 rows
     MAX_CSV_ROWS = 500
     if len(df) > MAX_CSV_ROWS:
-        return jsonify({
-            "status": "error",
-            "message": f"CSV exceeds maximum batch limit of {MAX_CSV_ROWS} rows (uploaded {len(df)} rows).",
-            "data": None
-        }), 413
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"CSV exceeds maximum batch limit of {MAX_CSV_ROWS} rows (uploaded {len(df)} rows)."
+        )
 
     processed = 0
     skipped = 0
@@ -190,32 +189,34 @@ def import_csv_comments(current_user, db, project_id):
 
     db.commit()
 
-    return jsonify({
+    return {
         "status": "success",
         "message": f"CSV import finished. {processed} rows analyzed, {skipped} rows skipped.",
         "data": {
             "total_processed": processed,
             "skipped_rows": skipped
         }
-    }), 201
+    }
 
-@comment_bp.route("/api/projects/<int:project_id>/comments", methods=["GET"])
-@require_auth
-def list_comments(current_user, db, project_id):
+@comment_router.get("/projects/{project_id}/comments")
+def list_comments(
+    project_id: int,
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    sentiment: str = Query("all"),
+    priority: str = Query("all"),
+    source: str = Query("all"),
+    search: str = Query(""),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
-
-    page = max(1, int(request.args.get("page", 1)))
-    limit = min(100, max(1, int(request.args.get("limit", 25))))
-    sentiment = request.args.get("sentiment", "all").strip()
-    priority = request.args.get("priority", "all").strip()
-    source = request.args.get("source", "all").strip()
-    search = request.args.get("search", "").strip()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     q = db.query(Comment).join(Analysis).filter(Comment.project_id == project.id)
 
@@ -225,8 +226,8 @@ def list_comments(current_user, db, project_id):
         q = q.filter(Analysis.priority == priority)
     if source != "all":
         q = q.filter(Comment.source == source)
-    if search:
-        q = q.filter(Comment.text.ilike(f"%{search}%"))
+    if search.strip():
+        q = q.filter(Comment.text.ilike(f"%{search.strip()}%"))
 
     total_items = q.count()
     comments = q.order_by(Comment.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
@@ -263,7 +264,7 @@ def list_comments(current_user, db, project_id):
 
     total_pages = (total_items + limit - 1) // limit
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Comments retrieved",
         "data": {
@@ -275,38 +276,40 @@ def list_comments(current_user, db, project_id):
                 "total_pages": total_pages
             }
         }
-    }), 200
+    }
 
-@comment_bp.route("/api/comments/<int:comment_id>", methods=["DELETE"])
-@require_auth
-def delete_comment(current_user, db, comment_id):
+@comment_router.delete("/comments/{comment_id}")
+def delete_comment(
+    comment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
         Project.user_id == current_user.id
     ).first()
 
     if not comment:
-        return jsonify({"status": "error", "message": "Comment not found or forbidden", "data": None}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found or forbidden")
 
     db.delete(comment)
     db.commit()
-    return jsonify({"status": "success", "message": "Comment deleted", "data": None}), 200
+    return {"status": "success", "message": "Comment deleted", "data": None}
 
-@comment_bp.route("/api/comments/<int:comment_id>/correct", methods=["POST"])
-@require_auth
-def submit_correction(current_user, db, comment_id):
+@comment_router.post("/comments/{comment_id}/correct")
+def submit_correction(
+    comment_id: int,
+    data: CorrectionSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
         Project.user_id == current_user.id
     ).first()
 
     if not comment:
-        return jsonify({"status": "error", "message": "Comment not found", "data": None}), 404
-
-    try:
-        data = CorrectionSchema(**request.get_json(force=True))
-    except ValidationError as e:
-        return jsonify({"status": "error", "message": e.errors()[0]["msg"], "data": None}), 400
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
     existing = db.query(Correction).filter(Correction.comment_id == comment_id).first()
     if existing:
@@ -322,7 +325,7 @@ def submit_correction(current_user, db, comment_id):
 
     db.commit()
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Correction recorded",
         "data": {
@@ -330,23 +333,22 @@ def submit_correction(current_user, db, comment_id):
             "original_sentiment": comment.analysis.sentiment if comment.analysis else "Unknown",
             "corrected_sentiment": data.corrected_sentiment
         }
-    }), 200
+    }
 
-@comment_bp.route("/api/comments/<int:comment_id>/ticket", methods=["PATCH"])
-@require_auth
-def update_ticket(current_user, db, comment_id):
+@comment_router.patch("/comments/{comment_id}/ticket")
+def update_ticket(
+    comment_id: int,
+    data: TicketUpdateSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
         Project.user_id == current_user.id
     ).first()
 
     if not comment:
-        return jsonify({"status": "error", "message": "Comment not found", "data": None}), 404
-
-    try:
-        data = TicketUpdateSchema(**request.get_json(force=True))
-    except ValidationError as e:
-        return jsonify({"status": "error", "message": e.errors()[0]["msg"], "data": None}), 400
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
     ticket = db.query(Ticket).filter(Ticket.comment_id == comment_id).first()
     if not ticket:
@@ -359,7 +361,7 @@ def update_ticket(current_user, db, comment_id):
 
     db.commit()
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Ticket updated",
         "data": {
@@ -367,4 +369,4 @@ def update_ticket(current_user, db, comment_id):
             "status": ticket.status,
             "note": ticket.note
         }
-    }), 200
+    }

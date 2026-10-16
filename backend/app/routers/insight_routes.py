@@ -1,31 +1,37 @@
 import math
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, request, jsonify
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 from sqlalchemy import func
-from ..models import Project, Comment, Analysis, Correction, Theme
-from ..auth import require_auth
+
+from ..database import get_db
+from ..models import User, Project, Comment, Analysis, Correction, Theme
+from ..auth import get_current_user
 from ..ml import ml_engine
 from ..llm import llm_service
 
-insight_bp = Blueprint("insights", __name__)
+insight_router = APIRouter(prefix="/api/projects", tags=["insights"])
 
-@insight_bp.route("/api/projects/<int:project_id>/stats", methods=["GET"])
-@require_auth
-def get_project_stats(current_user, db, project_id):
+@insight_router.get("/{project_id}/stats")
+def get_project_stats(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     comments = db.query(Comment).join(Analysis).filter(Comment.project_id == project.id).all()
     total_comments = len(comments)
 
     if total_comments == 0:
-        return jsonify({
+        return {
             "status": "success",
             "message": "No comments yet",
             "data": {
@@ -44,7 +50,7 @@ def get_project_stats(current_user, db, project_id):
                 "top_keywords": [],
                 "wordcloud": ""
             }
-        }), 200
+        }
 
     pos = sum(1 for c in comments if c.analysis and c.analysis.sentiment == "Positive")
     neu = sum(1 for c in comments if c.analysis and c.analysis.sentiment == "Neutral")
@@ -77,7 +83,6 @@ def get_project_stats(current_user, db, project_id):
     agreement_rate = round(agreements / reviewed_count, 3) if reviewed_count > 0 else 1.0
 
     # Daily aggregation & Spike Detection (last 30 days)
-    # Spike: negative share > 7-day trailing mean + 2 std dev AND day has >= 10 comments
     day_map = {}
     for c in comments:
         day_str = c.created_at.strftime("%Y-%m-%d")
@@ -122,7 +127,7 @@ def get_project_stats(current_user, db, project_id):
     combined_text = " ".join([c.text for c in comments[:100]])
     wordcloud_b64 = ml_engine.generate_wordcloud(combined_text)
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Statistics calculated",
         "data": {
@@ -149,23 +154,26 @@ def get_project_stats(current_user, db, project_id):
             "top_keywords": top_keywords,
             "wordcloud": wordcloud_b64
         }
-    }), 200
+    }
 
-@insight_bp.route("/api/projects/<int:project_id>/briefing", methods=["POST"])
-@require_auth
-def get_executive_briefing(current_user, db, project_id):
+@insight_router.post("/{project_id}/briefing")
+def get_executive_briefing(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     comments = db.query(Comment).filter(Comment.project_id == project.id).order_by(Comment.created_at.desc()).all()
     total = len(comments)
     if total == 0:
-        return jsonify({
+        return {
             "status": "success",
             "message": "No comments to analyze",
             "data": {
@@ -174,7 +182,7 @@ def get_executive_briefing(current_user, db, project_id):
                 "suggested_actions": ["Add or import comments to generate an executive briefing."],
                 "sampled_comment_ids": []
             }
-        }), 200
+        }
 
     neg_comments = [c for c in comments if c.analysis and c.analysis.sentiment == "Negative"]
     sample = [c.text for c in (neg_comments[:8] + comments[:4])]
@@ -189,22 +197,25 @@ def get_executive_briefing(current_user, db, project_id):
     )
     briefing_data["sampled_comment_ids"] = sample_ids[:10]
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Briefing generated",
         "data": briefing_data
-    }), 200
+    }
 
-@insight_bp.route("/api/projects/<int:project_id>/themes", methods=["GET"])
-@require_auth
-def get_project_themes(current_user, db, project_id):
+@insight_router.get("/{project_id}/themes")
+def get_project_themes(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     project = db.query(Project).filter(
         Project.id == project_id,
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     themes = db.query(Theme).filter(Theme.project_id == project.id).all()
     out = []
@@ -217,8 +228,8 @@ def get_project_themes(current_user, db, project_id):
             "representative_comments": t.representative_comments
         })
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Themes retrieved",
         "data": out
-    }), 200
+    }

@@ -1,11 +1,8 @@
 import os
-from app import create_app
+import uvicorn
 from app.config import Config
-
-app = create_app()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", Config.PORT))
-    debug = Config.FLASK_DEBUG
-    print(f"[*] Starting TweetSense v2 API on http://127.0.0.1:{port} (debug={debug})")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    print(f"[*] Starting TweetSense v2 FastAPI on http://127.0.0.1:{port}")
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)

@@ -1,16 +1,22 @@
 import secrets
-from flask import Blueprint, request, jsonify
-from pydantic import ValidationError
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from sqlalchemy import func
-from ..models import Project, Comment, Analysis
+
+from ..database import get_db
+from ..models import User, Project, Comment, Analysis
 from ..schemas import ProjectCreateSchema, ProjectUpdateSchema
-from ..auth import require_auth
+from ..auth import get_current_user
 
-project_bp = Blueprint("projects", __name__, url_prefix="/api/projects")
+project_router = APIRouter(prefix="/api/projects", tags=["projects"])
 
-@project_bp.route("", methods=["GET"])
-@require_auth
-def list_projects(current_user, db):
+class ShareToggleSchema(BaseModel):
+    enabled: Optional[bool] = True
+
+@project_router.get("")
+def list_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     projects = db.query(Project).filter(
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).order_by(Project.created_at.desc()).all()
@@ -35,22 +41,14 @@ def list_projects(current_user, db):
             "negative_percentage": neg_pct
         })
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Projects fetched",
         "data": out
-    }), 200
+    }
 
-@project_bp.route("", methods=["POST"])
-@require_auth
-def create_project(current_user, db):
-    try:
-        data = ProjectCreateSchema(**request.get_json(force=True))
-    except ValidationError as e:
-        return jsonify({"status": "error", "message": e.errors()[0]["msg"], "data": None}), 400
-    except Exception:
-        return jsonify({"status": "error", "message": "Invalid JSON body", "data": None}), 400
-
+@project_router.post("", status_code=201)
+def create_project(data: ProjectCreateSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = Project(
         user_id=current_user.id,
         name=data.name,
@@ -62,7 +60,7 @@ def create_project(current_user, db):
     db.commit()
     db.refresh(project)
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Project created",
         "data": {
@@ -74,20 +72,22 @@ def create_project(current_user, db):
             "is_demo": project.is_demo,
             "created_at": project.created_at.isoformat()
         }
-    }), 201
+    }
 
-@project_bp.route("/<int:project_id>", methods=["GET"])
-@require_auth
-def get_project(current_user, db, project_id):
+@project_router.get("/{project_id}")
+def get_project(project_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
         (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Project retrieved",
         "data": {
@@ -99,23 +99,20 @@ def get_project(current_user, db, project_id):
             "is_demo": project.is_demo,
             "created_at": project.created_at.isoformat()
         }
-    }), 200
+    }
 
-@project_bp.route("/<int:project_id>", methods=["PATCH"])
-@require_auth
-def update_project(current_user, db, project_id):
+@project_router.patch("/{project_id}")
+def update_project(project_id: int, data: ProjectUpdateSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found or forbidden", "data": None}), 404
-
-    try:
-        data = ProjectUpdateSchema(**request.get_json(force=True))
-    except ValidationError as e:
-        return jsonify({"status": "error", "message": e.errors()[0]["msg"], "data": None}), 400
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found or forbidden"
+        )
 
     if data.name is not None:
         project.name = data.name
@@ -127,7 +124,7 @@ def update_project(current_user, db, project_id):
     db.commit()
     db.refresh(project)
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Project updated",
         "data": {
@@ -139,38 +136,39 @@ def update_project(current_user, db, project_id):
             "is_demo": project.is_demo,
             "created_at": project.created_at.isoformat()
         }
-    }), 200
+    }
 
-@project_bp.route("/<int:project_id>", methods=["DELETE"])
-@require_auth
-def delete_project(current_user, db, project_id):
+@project_router.delete("/{project_id}")
+def delete_project(project_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found or forbidden", "data": None}), 404
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found or forbidden"
+        )
 
     db.delete(project)
     db.commit()
-    return jsonify({"status": "success", "message": "Project deleted", "data": None}), 200
+    return {"status": "success", "message": "Project deleted", "data": None}
 
-@project_bp.route("/<int:project_id>/share", methods=["POST"])
-@require_auth
-def toggle_share_token(current_user, db, project_id):
+@project_router.post("/{project_id}/share")
+def toggle_share_token(project_id: int, body: ShareToggleSchema = ShareToggleSchema(), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id
     ).first()
 
     if not project:
-        return jsonify({"status": "error", "message": "Project not found", "data": None}), 404
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
 
-    body = request.get_json(silent=True) or {}
-    enabled = body.get("enabled", True)
-
-    if enabled:
+    if body.enabled:
         if not project.share_token:
             project.share_token = f"sh_{secrets.token_hex(8)}"
     else:
@@ -179,11 +177,11 @@ def toggle_share_token(current_user, db, project_id):
     db.commit()
     db.refresh(project)
 
-    return jsonify({
+    return {
         "status": "success",
         "message": "Share link updated",
         "data": {
             "share_token": project.share_token,
             "share_url": f"/r/{project.share_token}" if project.share_token else None
         }
-    }), 200
+    }

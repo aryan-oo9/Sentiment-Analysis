@@ -8,10 +8,8 @@ services:
     region: oregon
     healthCheckPath: /api/health
     envVars:
-      - key: FLASK_ENV
+      - key: ENVIRONMENT
         value: production
-      - key: FLASK_DEBUG
-        value: "false"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

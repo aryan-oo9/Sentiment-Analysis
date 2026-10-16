@@ -1,11 +1,16 @@
 import time
-from functools import wraps
+from typing import Optional
 import bcrypt
 import jwt
-from flask import request, jsonify
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+
 from .config import Config
-from .database import SessionLocal
+from .database import get_db
 from .models import User
+
+security = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt(rounds=12)
@@ -30,46 +35,34 @@ def create_access_token(user_id: int, email: str) -> str:
 def decode_access_token(token: str) -> dict:
     return jwt.decode(token, Config.JWT_SECRET, algorithms=["HS256"])
 
-def require_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return jsonify({
-                "status": "error",
-                "message": "Authorization token required",
-                "data": None
-            }), 401
+def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization token required"
+        )
+    token = credentials.credentials
+    try:
+        payload = decode_access_token(token)
+        user_id = int(payload.get("sub", 0))
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired"
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
 
-        token = auth_header.split(" ", 1)[1].strip()
-        try:
-            payload = decode_access_token(token)
-            user_id = int(payload["sub"])
-        except jwt.ExpiredSignatureError:
-            return jsonify({
-                "status": "error",
-                "message": "Token has expired",
-                "data": None
-            }), 401
-        except Exception:
-            return jsonify({
-                "status": "error",
-                "message": "Invalid token",
-                "data": None
-            }), 401
-
-        db = SessionLocal()
-        try:
-            user = db.query(User).filter(User.id == user_id).first()
-            if not user:
-                return jsonify({
-                    "status": "error",
-                    "message": "User not found",
-                    "data": None
-                }), 401
-            # Pass user object or user_id into decorated function
-            return f(current_user=user, db=db, *args, **kwargs)
-        finally:
-            db.close()
-
-    return decorated
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    return user

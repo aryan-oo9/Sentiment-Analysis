@@ -1,7 +1,7 @@
 # TweetSense
 
 > **AI Feedback Intelligence & Sentiment Triage Platform**  
-> Built with React 19, TypeScript, Flask, and Scikit-Learn.
+> Built with React 19, TypeScript, FastAPI, and Scikit-Learn.
 
 TweetSense classifies customer feedback, explains the exact words driving the verdict via linear model coefficients, and triages operational priority in real time.
 
@@ -10,7 +10,7 @@ TweetSense classifies customer feedback, explains the exact words driving the ve
 ## Architecture Overview
 
 - **Frontend (`/frontend`)**: React 19 + TypeScript + Vite Single Page Application styled with custom DTCG design tokens and Tailwind CSS.
-- **Backend (`/backend`)**: Modular Flask application serving REST APIs with SQLAlchemy ORM, JWT authentication, and gunicorn production server.
+- **Backend (`/backend`)**: High-performance FastAPI application serving REST APIs with automatic OpenAPI docs (`/docs`), SQLAlchemy ORM, JWT authentication, and Uvicorn ASGI server.
 - **ML Engine**: Scikit-Learn Logistic Regression model trained on 1.6M Sentiment140 tweets with a 500,000 n-gram TF-IDF vectorizer, spaCy tokenization, and TextBlob polarity calibration.
 - **Database**: PostgreSQL (Supabase) in production / SQLite for local development.
 

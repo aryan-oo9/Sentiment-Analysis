@@ -31,11 +31,20 @@ class LLMService:
         self.timeout_sec = 8.0
 
     def _is_groq(self) -> bool:
-        return self.provider.lower() == "groq" or (bool(self.api_key) and self.api_key.startswith("gsk_"))
+        if bool(self.api_key) and self.api_key.startswith("gsk_"):
+            return True
+        return self.provider.lower() == "groq" and self.api_key != "mock-test-key"
 
     def _get_candidate_models(self) -> List[str]:
         if self._is_groq():
-            return ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+            candidates = [self.model, "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "openai/gpt-oss-120b", "llama-3.1-8b-instant"]
+            seen = set()
+            deduped = []
+            for m in candidates:
+                if m and m not in seen:
+                    seen.add(m)
+                    deduped.append(m)
+            return deduped
         candidates = [self.model, "gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest"]
         seen = set()
         deduped = []
@@ -65,12 +74,17 @@ class LLMService:
                     }
                     headers = {
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self.api_key}"
+                        "Authorization": f"Bearer {self.api_key}",
+                        "User-Agent": "TweetSense/2.0"
                     }
                     req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
                     with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
                         res_json = json.loads(response.read().decode("utf-8"))
-                        return res_json["choices"][0]["message"]["content"].strip()
+                        if "choices" in res_json:
+                            return res_json["choices"][0]["message"]["content"].strip()
+                        if "candidates" in res_json:
+                            return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        return None
                 else:
                     # Google Gemini REST
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
@@ -78,10 +92,18 @@ class LLMService:
                         "contents": [{"parts": [{"text": prompt}]}],
                         "generationConfig": {"temperature": 0.2, "maxOutputTokens": max_tokens}
                     }
-                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    headers = {
+                        "Content-Type": "application/json",
+                        "User-Agent": "TweetSense/2.0"
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
                     with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
                         res_json = json.loads(response.read().decode("utf-8"))
-                        return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        if "candidates" in res_json:
+                            return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        if "choices" in res_json:
+                            return res_json["choices"][0]["message"]["content"].strip()
+                        return None
             except Exception as e:
                 logger.warning(f"[LLMService] Call to {model_name} failed: {e}")
                 continue

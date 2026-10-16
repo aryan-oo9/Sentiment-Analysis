@@ -43,10 +43,10 @@ class Config:
     JWT_SECRET = os.getenv("JWT_SECRET", "tweetsense-v2-dev-secret-key-change-in-prod")
     JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", 24))
     
-    # LLM Settings
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
-    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq" if LLM_API_KEY.startswith("gsk_") else "gemini")
+    _default_model = "openai/gpt-oss-20b" if LLM_PROVIDER.lower() == "groq" else "gemini-3-flash-preview"
+    LLM_MODEL = os.getenv("LLM_MODEL", _default_model)
     
     # Models Paths
     MODEL_PATH = BASE_DIR / "trained_model.sav"

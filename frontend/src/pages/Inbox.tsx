@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { api } from "../api/client";
-import type { CommentItem } from "../api/types";
+import type { CommentItem, Project } from "../api/types";
 import { Search, Check, Copy, X } from "lucide-react";
 
 export const Inbox: React.FC = () => {
   const { projectId } = useParams();
   const id = Number(projectId);
 
+  const [project, setProject] = useState<Project | null>(null);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
@@ -47,7 +48,10 @@ export const Inbox: React.FC = () => {
   };
 
   useEffect(() => {
-    if (id) fetchComments();
+    if (id) {
+      fetchComments();
+      api.getProject(id).then(setProject).catch(console.error);
+    }
   }, [id, page, sentimentFilter, priorityFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -57,6 +61,10 @@ export const Inbox: React.FC = () => {
   };
 
   const handleCorrection = async (commentId: number, newSent: string) => {
+    if (project?.is_demo) {
+      alert("Sample data, read-only. Create your own project to edit.");
+      return;
+    }
     try {
       await api.correctComment(commentId, newSent);
       // Optimistic state update
@@ -80,6 +88,10 @@ export const Inbox: React.FC = () => {
 
   const handleGenerateDraft = async () => {
     if (!selectedComment) return;
+    if (project?.is_demo) {
+      alert("Sample data, read-only. Create your own project to edit.");
+      return;
+    }
     setDrafting(true);
     try {
       const draft = await api.createReplyDraft(selectedComment.id, draftTone);
@@ -93,6 +105,10 @@ export const Inbox: React.FC = () => {
 
   const handleApproveDraft = async () => {
     if (!activeDraft) return;
+    if (project?.is_demo) {
+      alert("Sample data, read-only. Create your own project to edit.");
+      return;
+    }
     try {
       const updated = await api.updateReplyDraft(activeDraft.id, {
         body: activeDraft.body,
@@ -147,6 +163,26 @@ export const Inbox: React.FC = () => {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 w-full">
+      {/* Sample Project Read-Only Banner */}
+      {project?.is_demo && (
+        <div className="bg-[var(--surface)] border-2 border-[var(--ink)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="bg-[var(--ink)] text-[var(--bg)] text-xs font-black px-2.5 py-1 uppercase tracking-wider">
+              Sample Data
+            </span>
+            <span className="text-sm font-semibold">
+              Sample data, read-only. Create your own project to edit.
+            </span>
+          </div>
+          <Link
+            to="/app"
+            className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors whitespace-nowrap"
+          >
+            Create Your Project
+          </Link>
+        </div>
+      )}
+
       {/* Title & Filter Bar */}
       <div className="space-y-4 border-b-2 border-[var(--ink)] pb-6">
         <div className="flex justify-between items-baseline">
@@ -280,6 +316,11 @@ export const Inbox: React.FC = () => {
 
                     {/* Comment Body */}
                     <td className="p-3 align-top font-normal leading-relaxed text-sm">
+                      {project?.is_demo && (
+                        <span className="inline-block bg-[var(--ink)] text-[var(--bg)] font-black text-[9px] px-1.5 py-0.5 uppercase tracking-wider mr-2 align-middle">
+                          Sample Data
+                        </span>
+                      )}
                       {highlightDrivingWords(comment.text, comment.analysis.top_words)}
                     </td>
 

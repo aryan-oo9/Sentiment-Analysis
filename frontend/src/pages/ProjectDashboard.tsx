@@ -128,13 +128,39 @@ export const ProjectDashboard: React.FC = () => {
             Open Triage Inbox
           </Link>
           <button
-            onClick={() => setShowIngest(true)}
-            className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-5 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors"
+            onClick={() => {
+              if (project.is_demo) {
+                alert("Sample data, read-only. Create your own project to edit.");
+                return;
+              }
+              setShowIngest(true);
+            }}
+            className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-5 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
           >
             <Plus size={16} /> Ingest Feedback
           </button>
         </div>
       </div>
+
+      {/* Sample Project Read-Only Banner */}
+      {project.is_demo && (
+        <div className="bg-[var(--surface)] border-2 border-[var(--ink)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="bg-[var(--ink)] text-[var(--bg)] text-xs font-black px-2.5 py-1 uppercase tracking-wider">
+              Sample Project
+            </span>
+            <span className="text-sm font-semibold">
+              Sample data, read-only. Create your own project to edit.
+            </span>
+          </div>
+          <Link
+            to="/app"
+            className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors whitespace-nowrap"
+          >
+            Create Your Project
+          </Link>
+        </div>
+      )}
 
       {/* Signature Statement Figure */}
       <div className="border-4 border-[var(--ink)] bg-[var(--surface)] p-8 md:p-12 space-y-4">
@@ -156,7 +182,8 @@ export const ProjectDashboard: React.FC = () => {
           <div className="flex items-center gap-3 p-3 bg-[var(--field-coral)] text-white text-xs font-bold uppercase tracking-wider mt-4">
             <AlertTriangle size={18} />
             <span>
-              Spike detected on {recentSpike.date}: {recentSpike.negative} negative comments ({((recentSpike.negative / recentSpike.total) * 100).toFixed(0)}% of daily volume).
+              {project.is_demo ? "[Sample Data] " : ""}Spike detected on {recentSpike.date}: {recentSpike.negative} negative comments ({((recentSpike.negative / recentSpike.total) * 100).toFixed(0)}% of daily volume).
+              {project.is_demo ? " Simulated incident: payment gateway failure recovery." : ""}
             </span>
           </div>
         )}

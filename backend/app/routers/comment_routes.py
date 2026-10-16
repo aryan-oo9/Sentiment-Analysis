@@ -24,11 +24,17 @@ def ingest_pasted_comments(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     saved_items = []
     for item in data.comments:
@@ -103,11 +109,17 @@ async def import_csv_comments(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files are supported")
@@ -296,11 +308,17 @@ def delete_comment(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found or forbidden")
+
+    if comment.project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     db.delete(comment)
     db.commit()
@@ -315,11 +333,17 @@ def submit_correction(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    if comment.project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     existing = db.query(Correction).filter(Correction.comment_id == comment_id).first()
     if existing:
@@ -354,11 +378,17 @@ def update_ticket(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    if comment.project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     ticket = db.query(Ticket).filter(Ticket.comment_id == comment_id).first()
     if not ticket:

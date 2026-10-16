@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import User
+from ..models import User, Project
 from ..schemas import RegisterSchema, LoginSchema
 from ..auth import hash_password, verify_password, create_access_token, get_current_user
 
@@ -70,5 +70,29 @@ def get_me(current_user: User = Depends(get_current_user)):
                 "email": current_user.email,
                 "created_at": current_user.created_at.isoformat()
             }
+        }
+    }
+
+@auth_router.post("/demo-session")
+def demo_session(db: Session = Depends(get_db)):
+    demo_user = db.query(User).filter(User.email == "demo@tweetsense.io").first()
+    if not demo_user:
+        demo_user = User(email="demo@tweetsense.io", password_hash=hash_password("DemoGuest1234!"))
+        db.add(demo_user)
+        db.commit()
+        db.refresh(demo_user)
+
+    demo_project = db.query(Project).filter(Project.is_demo == True).first()
+    token = create_access_token(demo_user.id, demo_user.email)
+    return {
+        "status": "success",
+        "message": "Demo session initialized",
+        "data": {
+            "token": token,
+            "user": {
+                "id": demo_user.id,
+                "email": demo_user.email
+            },
+            "demo_project_id": demo_project.id if demo_project else None
         }
     }

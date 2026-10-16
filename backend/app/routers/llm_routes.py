@@ -18,11 +18,17 @@ def create_reply_draft(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found or forbidden")
+
+    if comment.project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     sentiment = comment.analysis.sentiment if comment.analysis else "Neutral"
     res = llm_service.generate_reply_draft(comment.text, sentiment=sentiment, tone=data.tone)
@@ -59,11 +65,17 @@ def update_reply_draft(
 ):
     draft = db.query(ReplyDraft).join(Comment).join(Project).filter(
         ReplyDraft.id == draft_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not draft:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Draft not found or forbidden")
+
+    if draft.comment.project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
 
     draft.body = data.body
     draft.status = data.status

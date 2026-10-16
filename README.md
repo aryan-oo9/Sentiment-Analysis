@@ -44,14 +44,15 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Seed Demo Data
-To populate the database with a demonstration workspace of ~150 synthetic customer inquiries across 3 weeks with a verified incident spike:
+## Sample Workspace Access
+To access the demonstration workspace of ~150 synthetic customer inquiries across 3 weeks with a verified incident spike:
+- **1-Click Access:** Click **"Try the sample →"** on the landing page for immediate instant access (no credentials required).
+- **Demo Account:** `demo@tweetsense.io` (read-only sample account).
+
+To seed demo data in a fresh local environment:
 ```bash
 python backend/seed_demo.py
 ```
-Demo login:
-- **Email:** `demo@tweetsense.io`
-- **Password:** `DemoGuest1234!`
 
 ---
 

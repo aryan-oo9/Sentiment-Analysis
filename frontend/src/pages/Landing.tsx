@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { api } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import type { AnalysisData } from "../api/types";
 
 const SAMPLES = [
@@ -11,10 +12,27 @@ const SAMPLES = [
 ];
 
 export const Landing: React.FC = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [inputText, setInputText] = useState(SAMPLES[0]);
   const [result, setResult] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+
+  const handleTrySample = async () => {
+    setSampleLoading(true);
+    try {
+      const data = await api.demoSession();
+      api.setToken(data.token);
+      login(data.token, data.user);
+      navigate(`/app/p/${data.demo_project_id || 1}`);
+    } catch (err: any) {
+      alert(err.message || "Failed to initialize sample project");
+    } finally {
+      setSampleLoading(false);
+    }
+  };
 
   const handleAnalyze = async (textToAnalyze: string) => {
     if (!textToAnalyze.trim()) return;
@@ -57,7 +75,14 @@ export const Landing: React.FC = () => {
           Paste customer feedback. TweetSense classifies sentiment, explains the exact words that drove the verdict, and triages operational priority.
         </p>
 
-        <div className="flex flex-wrap gap-4 pt-4">
+        <div className="flex flex-wrap items-center gap-4 pt-4">
+          <button
+            onClick={handleTrySample}
+            disabled={sampleLoading}
+            className="bg-[var(--accent)] text-[var(--accent-ink)] px-6 py-3 font-bold text-base hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors cursor-pointer"
+          >
+            {sampleLoading ? "Opening Sample..." : "Try the sample →"}
+          </button>
           <Link
             to="/login"
             className="bg-[var(--ink)] text-[var(--bg)] px-6 py-3 font-bold text-base hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors"

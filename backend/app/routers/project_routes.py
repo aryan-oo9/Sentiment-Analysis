@@ -105,13 +105,19 @@ def get_project(project_id: int, current_user: User = Depends(get_current_user),
 def update_project(project_id: int, data: ProjectUpdateSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found or forbidden"
+        )
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
         )
 
     if data.name is not None:
@@ -142,13 +148,19 @@ def update_project(project_id: int, data: ProjectUpdateSchema, current_user: Use
 def delete_project(project_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found or forbidden"
+        )
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
         )
 
     db.delete(project)
@@ -159,13 +171,19 @@ def delete_project(project_id: int, current_user: User = Depends(get_current_use
 def toggle_share_token(project_id: int, body: ShareToggleSchema = ShareToggleSchema(), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        Project.user_id == current_user.id
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
     ).first()
 
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
+        )
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
         )
 
     if body.enabled:

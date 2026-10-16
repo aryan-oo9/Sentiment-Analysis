@@ -73,6 +73,12 @@ class ApiClient {
     return this.request<{ user: any }>("/api/auth/me", { method: "GET" });
   }
 
+  async demoSession() {
+    return this.request<{ token: string; user: any; demo_project_id: number | null }>("/api/auth/demo-session", {
+      method: "POST",
+    });
+  }
+
   // Projects
   async getProjects() {
     return this.request<any[]>("/api/projects", { method: "GET" });

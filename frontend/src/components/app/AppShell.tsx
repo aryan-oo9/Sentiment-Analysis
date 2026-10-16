@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, Outlet, useLocation, useParams, useNavigate } from "react-router";
 import { useAuth } from "../../auth/AuthContext";
-import { LayoutDashboard, Inbox, FolderKanban, Settings, LogOut, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Inbox, FolderKanban, Settings, LogOut, ArrowLeft, Search } from "lucide-react";
+import { CommandPalette } from "./CommandPalette";
 
 export const AppShell: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -18,6 +20,8 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[var(--bg)] text-[var(--ink)]">
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+
       {/* Sidebar */}
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between p-4 md:p-6 shrink-0">
         <div>
@@ -29,6 +33,20 @@ export const AppShell: React.FC = () => {
               Feedback intelligence
             </span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            className="w-full flex items-center justify-between border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--ink)] mb-6 transition-colors cursor-pointer bg-[var(--bg)]"
+            title="Press Ctrl+K or ⌘K to open command palette"
+          >
+            <span className="flex items-center gap-2">
+              <Search size={13} /> Command Menu
+            </span>
+            <kbd className="border border-[var(--border)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--ink)]">
+              Ctrl+K
+            </kbd>
+          </button>
 
           {isProjectView && (
             <Link

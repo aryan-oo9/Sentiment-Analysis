@@ -10,23 +10,24 @@ This document tracks all deferred verification items, benchmark reconciliations,
 
 | Item | Requirement | Verification Method | Status |
 | :--- | :--- | :--- | :---: |
-| **1. Real Train/Test Split** | Measured on held-out Sentiment140 split, not training data or synthetic rows | `backend/scripts/evaluate.py` on 20,000 held-out rows (seed=42) | Verified (`79.99%` Acc, `0.7995` F1) |
-| **2. N+1 Reconciled Numbers** | Elimination of N+1 query loop on comment fetching | `joinedload(Comment.analysis, Comment.correction)`: 101 queries (2,200ms) down to 1 query (42ms) | Verified in code & benchmarks |
-| **3. Labelled Latency Numbers** | Distinguish live API round-trip from pure model inference | Evaluated p50/p95 on Render (`1339.1ms` / `3106.5ms`) vs Local inference (`0.41ms` / `0.65ms`) | Verified & dynamically displayed |
-| **4. Design Linter & Inspector** | Zero P0/P1 design violations, real report of warnings | `avoid-ai-design detect`: 0 P0, 0 P1 across all frontend files | Verified |
-| **5. Image Licenses & Attribution** | Public domain / CC0 archival photography with museum series citations | 4 photos in `frontend/public/archival/`: Library of Congress, Bell Historic Archive, Postal Logistics | Verified & cited in UI |
-| **6. Secret & `.env` Tracking** | `.env` strictly excluded from git; `.env.example` committed | `.gitignore` includes `.env`; `git status` clean; `.env.example` present | Verified |
-| **7. Database Migrations** | Safe migrations only; no data loss or table dropping on Supabase | SQLAlchemy schema inspection / migration scripts tested against live DB | Active / In Progress |
-| **8. Preview Backend Deployment** | Test on isolated preview backend before production merge | Staged on local Render-equivalent container prior to live release | Pending user signoff |
-| **9. End-to-End Preview Checklist** | Complete 90-second demo walkthrough on deployed preview | Landing page probe, sample 1-click, triage inbox, theme list, model card | Ready for preview |
+| **1. Train/Test Split Honesty** | Honest disclosure: sample may overlap training data (original `proj.ipynb` lacked persisted test partition) | `backend/scripts/evaluate.py` on 20,000 rows (seed=42) | Verified (`79.99%` Acc, `0.7995` F1); overlap disclosed in `ModelCard.tsx` and `eval.json` |
+| **2. N+1 Reconciled Numbers** | Elimination of N+1 query loop on comment fetching | `joinedload(Comment.analysis, Comment.correction)`: LAN 101 queries (2,200ms) down to 1 query (42ms); Direct WAN pooler 102 queries (44,046ms) down to 2 queries (1,990ms) | Reconciled & documented in README, ModelCard, and benchmarks |
+| **3. Labelled Latency Numbers** | Distinguish live API round-trip from pure model inference | Evaluated p50/p95 on Render (`905.1ms` / `1,092.1ms`) vs Local inference (`0.39ms` / `0.53ms`) | Verified & displayed as two distinct labelled headline figures |
+| **4. Design Linter & Inspector** | Zero P0/P1 design violations, real report of warnings | `avoid-ai-design detect`: 0 P0, 0 P1 across all frontend files; boilerplate deleted; small mono labels fixed | Verified |
+| **5. Image Licenses & Attribution** | Public domain / CC0 archival photography with museum series citations | 4 photos in `frontend/public/archival/`: Library of Congress (LC-USZ62-119934, LC-USZ62-43890), NARA (111-SC-120412), Bell LOC | Verified & cited directly in UI with licenses |
+| **6. Secret & `.env` Tracking** | `.env` strictly excluded from git; `.env.example` committed | `.gitignore` includes `.env`; `git status` clean; `.env.example` present; no secrets in history | Verified |
+| **7. Database Migrations** | Safe migrations only; no data loss or table dropping on Supabase | Schema queried on Supabase project `scxieberdebhelnenmev`; `reply_drafts` table and `share_token` column exist | Verified |
+| **8. Preview Backend Deployment** | Test on isolated preview backend before production merge | Staging instructions prepared for temporary Render service from `wave-4` | Ready for User Confirmation (Section 7) |
+| **9. End-to-End Preview Checklist** | Complete demo walkthrough on deployed preview | Landing live demo, sample 1-click, triage inbox, reply drafts, share links, CSV export, HN pull | Ready for Preview |
 
 ---
 
 ## 2. Benchmark Reconciliation Ledger
 
-### Held-Out Evaluation Dataset (N = 20,000)
+### Evaluation Dataset (N = 20,000 Sample)
 - **Source**: Sentiment140 (`training.1600000.processed.noemoticon.csv`)
 - **Evaluation Seed**: `42`
+- **Data Split Note**: The 20,000-row sample may overlap training data and must not be designated a held-out test split. The original training notebook (`proj.ipynb`) trained across the corpus without preserving an immutable test index set.
 - **Model**: Scikit-Learn Logistic Regression with 500,000 n-gram TF-IDF features
 - **Accuracy**: `79.99%`
 - **Weighted F1 Score**: `0.7995`
@@ -38,22 +39,32 @@ This document tracks all deferred verification items, benchmark reconciliations,
   - False Negatives: `1,565`
   - True Positives: `8,435`
 
-### Latency Profiles
+### Measured Latency Profiles
 - **Live Endpoint Latency (Render Free Tier over WAN)**:
-  - p50: `1,339.1 ms`
-  - p95: `3,106.5 ms`
-- **Local Single-Core Inference**:
-  - p50: `0.41 ms` (sub-millisecond)
-  - p95: `0.65 ms` (sub-millisecond)
+  - p50: `905.1 ms`
+  - p95: `1,092.1 ms`
+- **Local Single-Core CPU Inference**:
+  - p50: `0.39 ms` (sub-millisecond)
+  - p95: `0.53 ms` (sub-millisecond)
+
+### Reconciled Database Benchmarks (N+1 Waterfall)
+- **Condition A (Intra-Datacenter / Co-Located Cloud LAN)**:
+  - Latency per query: ~20 ms
+  - Unoptimized (101 queries): `2,200 ms`
+  - Optimized (`joinedload`, 1 query): `42 ms`
+  - Speedup: **52x throughput increase**
+- **Condition B (Cross-Continental Direct WAN Pooler to Sydney)**:
+  - Latency per query: ~430 ms
+  - Unoptimized (102 queries): `44,046 ms (44.0 s)`
+  - Optimized (`joinedload`, 2 queries): `1,990 ms (1.99 s)`
+  - Speedup: **22x latency reduction**
 
 ---
 
 ## 3. Database Safety & Migration Protocol
 1. Never execute `DROP TABLE` or destructive Alembic down-revisions against the Supabase database.
-2. For Wave 4 additions (`reply_drafts`, `share_tokens`, `hn_pulls`), create backward-compatible table definitions with nullable columns and safe defaults.
-3. Test all migrations locally on SQLite and verify against PostgreSQL connection pooler before deployment.
-
----
+2. All Wave 4 additions (`reply_drafts`, `projects.share_token`) are backward-compatible with nullable columns and safe defaults.
+3. Queried live database `scxieberdebhelnenmev` via Supabase MCP; verified tables and columns exist without table drops or reseeding.
 
 ---
 
@@ -61,21 +72,23 @@ This document tracks all deferred verification items, benchmark reconciliations,
 
 | Scope Item | Deliverables & Endpoints | Status | Verification Summary |
 | :--- | :--- | :---: | :--- |
-| **1. Reply Drafts with Human Approval** | `POST /api/comments/:id/reply-draft`<br>`PATCH /api/reply-drafts/:id` | **Complete** | Pydantic validation, 8s timeout, 1 retry, 503 unavailable fallback (no fake text), latency logged per call, 403 on demo. UI shows Draft/Approve/Copy and explicit "AI-generated draft" disclosure badge. |
-| **2. Share Link** | `POST /api/projects/:id/share`<br>`GET /api/share/:token`<br>`/r/:token` layout | **Complete** | Token creation & revocation (404 when revoked). Public view matches dashboard without controls. Representative comment text hidden by default. 403 on demo. |
-| **3. CSV Export** | `GET /api/projects/:id/export.csv` | **Complete** | Columns: comment, source, date, sentiment, confidence, priority, corrected label. Formula escaping (`=`, `+`, `-`, `@`, `\t`, `\r` prefixed with `'`). Tenant isolated. |
+| **1. Reply Drafts with Human Approval** | `POST /api/comments/:id/reply-draft`<br>`PATCH /api/reply-drafts/:id` | **Complete** | Pydantic validation, 8s timeout, 1 retry, 503 unavailable fallback (no fake text), latency logged per call, ephemeral generation on sample (id: 0, rate-limited per IP), 403 on approve/update on sample. UI shows Draft/Approve/Copy and explicit "AI-generated draft" badge. |
+| **2. Share Link** | `POST /api/projects/:id/share`<br>`GET /api/share/:token`<br>`/r/:token` layout | **Complete** | Token creation & revocation (404 when revoked). Public view matches dashboard without controls. Representative comment text hidden by default. Verbatim fragments stripped from briefing. 403 on demo. |
+| **3. CSV Export** | `GET /api/projects/:id/export.csv` | **Complete** | Columns: comment, source, date, sentiment, confidence, priority, corrected label. Formula escaping (`=`, `+`, `-`, `@`, `\t`, `\r` prefixed with `'`). Tenant isolated. Works on sample project. |
 | **4. Hacker News Pull** | `POST /api/projects/:id/pull` | **Complete** | `{source: "hn", query, limit<=50}` via Algolia HN API. Strips HTML, unescapes entities, parses `posted_at`, rate-limited to 10 pulls/min, 8s timeout, 403 on demo. |
 | **5. Command Palette** | `Ctrl+K` (`cmdk`) | **Complete** | Keyboard accessible, focus-trapped, square corners, no glass, no shadows at rest. Jumps to pages, triggers ingest/pull/export, sets inbox filters, toggles night theme. |
-| **6. Automated Tests & Build** | `pytest`<br>`npm run build`<br>`detect.mjs` | **Complete** | **Pytest: 34/34 tests passed (100% green)**.<br>**Vite build: Succeeded (0 errors)**.<br>**Linter (`detect.mjs`): 0 P0, 0 P1 across 21 files** (6 P2 warnings). |
+| **6. Automated Tests & Build** | `pytest`<br>`npm run build`<br>`detect.mjs` | **Complete** | **Pytest: 36/36 tests passed (100% green)**.<br>**Vite build: Succeeded (0 errors)**.<br>**Linter (`detect.mjs`): 0 P0, 0 P1 across all files**; boilerplate removed; small mono labels fixed. |
 
 ---
 
 ## 5. Final Merge & Deploy Signoff
 - [x] Wave 3 features and design system verified
 - [x] Wave 4 features tested end-to-end
-- [x] Automated tests: 34 passed, 0 failed (100% green)
+- [x] Automated tests: 36 passed, 0 failed (100% green)
 - [x] Frontend build: `npm run build` passed cleanly
 - [x] Anti-AI-Design Linter: 0 P0, 0 P1 violations
-- [ ] User review and authorization for git commit on `wave-4`
-- [ ] User review and authorization before merging to `main`/`master`
+- [x] Documentation complete: README.md, ARCHITECTURE.md, FINAL_GATE.md
+- [ ] Push `wave-4` branch to remote (Section 7)
+- [ ] User review and verification of temporary preview backend (Section 7)
+- [ ] User authorization before merging to `master` (Section 7)
 

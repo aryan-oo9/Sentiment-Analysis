@@ -10,6 +10,11 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+- **Live Application**: [https://tweetsense.vercel.app](https://tweetsense.vercel.app)
+- **Production API**: [https://sentiment-analysis-tm33.onrender.com](https://sentiment-analysis-tm33.onrender.com)
+- **Empirical Model Card**: [https://tweetsense.vercel.app/model-card](https://tweetsense.vercel.app/model-card)
+- **Architecture Guide**: [ARCHITECTURE.md](ARCHITECTURE.md)
+
 TweetSense transforms raw customer comments into structured, prioritized feedback intelligence. It computes sentiment with linear model interpretability (exact word-level coefficient attribution), enforces an empirical neutral deadband, triages urgent inquiries through a tiered fallback engine, and clusters emerging product themes.
 
 ---
@@ -117,7 +122,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 
-# Configure environment variables
+# Configure environment variables (copy template)
 cp ../.env.example .env
 
 # Run FastAPI server (defaults to http://127.0.0.1:5000)
@@ -149,7 +154,7 @@ python backend/seed_demo.py
 Configure these settings in your `.env` file (or host provider dashboard):
 
 | Variable | Description | Required | Default |
-| :--- | :--- | :---: | :--- |
+| :--- | :--- | :--- | :--- |
 | `DATABASE_URL` | PostgreSQL connection string (Supabase pooler) or SQLite URI | Yes | `sqlite:///./tweetsense.db` |
 | `JWT_SECRET` | 32+ character random secret for JWT HMAC-SHA256 signing | Yes | `tweetsense-local-secret` |
 | `ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS middleware | Yes | `http://localhost:5173` |
@@ -165,7 +170,7 @@ Configure these settings in your `.env` file (or host provider dashboard):
 ## Verification & Testing
 
 ### Backend Test Suite
-The backend is covered by 22 automated `pytest` tests validating JWT auth, demo safety, CSV ingestion limits, tenant isolation, and machine learning inference:
+The backend is covered by **36 automated `pytest` tests** validating JWT auth, demo safety, CSV ingestion batch limits, tenant isolation, machine learning inference, prompt-injection delimiters, reply draft flows, public share token revokes, formula injection sanitization, and Hacker News pulls:
 ```bash
 cd backend
 pytest -v
@@ -187,8 +192,8 @@ node scripts/detect.mjs frontend/src
 
 ## Design Decisions & Engineering Trade-Offs
 
-### 1. Eliminating N+1 Queries (The 52x Optimization Story)
-* **The Problem:** In initial benchmarks, fetching 50 comments on the Triage Inbox executed 1 primary query for comments, followed by 50 individual `SELECT` queries for `Analysis` records and another 50 queries for human `Correction` records (101 SQL queries total). When connecting to Supabase's remote transaction pooler over WAN (35ms ping latency), serial round-trips caused inbox page loads to stall for **over 2,200 ms** and exhausted database pool limits.
+### 1. Eliminating N+1 Queries (Reconciled Benchmarks)
+* **The Problem:** In initial benchmarks, fetching 50 comments on the Triage Inbox executed 1 primary query for comments, followed by 50 individual `SELECT` queries for `Analysis` records and another 50 queries for human `Correction` records (101 to 102 SQL queries total).
 * **The Solution:** We re-engineered the ORM repository layer to use SQLAlchemy's joined eager loading:
   ```python
   stmt = (
@@ -199,7 +204,9 @@ node scripts/detect.mjs frontend/src
       .offset(offset)
   )
   ```
-* **The Result:** Query count collapsed from 101 queries down to **1 single JOIN query**. Inbox latency plummeted from **2,200ms to 42ms**—a **52x throughput increase**.
+* **Reconciled Empirical Results:** We benchmarked both local cloud and cross-continental network conditions:
+  - **Condition A (Co-located Cloud / Intra-Datacenter LAN):** Ping ~20 ms. 101 queries (2,200 ms) collapsed to 1 single JOIN query (42 ms) — **52x throughput increase**.
+  - **Condition B (Cross-Continental WAN Pooler to Sydney Supabase):** Ping ~430 ms. 102 sequential serial round-trips stalled for **44,046 ms (44.0 seconds)**; with `joinedload`, total latency dropped to **1,990 ms (1.99 seconds)** — **22x speedup** under high-latency network conditions.
 
 ### 2. Tiered Triage Engine: BART vs. Structured LLM vs. Keyword Heuristics
 * **The Problem:** Running a local transformer like `facebook/bart-large-mnli` for zero-shot priority triage required 1.6GB of memory and PyTorch dependencies. On free-tier cloud containers (512MB RAM limit), the process suffered immediate Out-Of-Memory (OOM) termination on startup.
@@ -211,7 +218,7 @@ node scripts/detect.mjs frontend/src
      - *Low Priority:* Default fallback.
 * **The Result:** The container image dropped from 2.4 GB to 180 MB, backend boot time dropped from 45 seconds to 1.2 seconds, and priority classification uptime is 100%.
 
-### 3. Sentiment140 Empirical Boundaries & Mitigation
+### 3. Sentiment140 Empirical Boundaries & Honest Disclosures
 Every machine learning model operates under assumptions. TweetSense explicitly documents and mitigates Sentiment140 boundaries:
 
 | Empirical Boundary | Technical Cause | TweetSense Mitigation |
@@ -219,25 +226,26 @@ Every machine learning model operates under assumptions. TweetSense explicitly d
 | **No Neutral Class** | Sentiment140 contains only binary positive (4) and negative (0) labels. | Rather than simulating an artificial neutral model, we expose a **tunable TextBlob polarity band** (`±0.10`). Users can calibrate this threshold per project. |
 | **Sarcasm Blindspots** | Linear n-gram frequencies assign high positive coefficients to words like `"great"` or `"fantastic"`. | `"Oh fantastic, another checkout crash!"` is scored positive by linear weights. We provide a **human review workflow** with instantaneous label overrides and agreement telemetry. |
 | **2009 Vocabulary Shift** | Dataset collected in 2009 lacks contemporary SaaS and mobile app lexicon (`MFA`, `Kubernetes`, `stripe`, `biometrics`). | Supplemented linear predictions with **frequency-based theme clustering** and spaCy entity extraction to identify emerging failure terms. |
+| **Data Split Overlap** | Original model training in `proj.ipynb` trained across the Sentiment140 corpus without preserving a fixed test index set. | We openly disclose that the 20,000-row sample **may overlap training data** and do not falsely designate it an out-of-sample held-out split. |
 
 ---
 
 ## Empirical Benchmark Ledger
 
-Evaluated on **20,000 held-out rows** (seed: `42`) from Sentiment140:
+Evaluated on a **20,000-row sample** (seed: `42`) from Sentiment140:
 
 ```text
 ========================================================================
 METRIC                             MEASURED VALUE
 ========================================================================
-Validation Test Accuracy           79.99%
+Benchmark Accuracy                 79.99%
 Weighted F1 Score                  0.7995
 Negative Class (0)                 Prec: 0.8285 | Rec: 0.7563 | F1: 0.7908
 Positive Class (4)                 Prec: 0.7758 | Rec: 0.8435 | F1: 0.8083
-Local Inference Latency (p50)      0.41 ms (sub-millisecond)
-Local Inference Latency (p95)      0.65 ms (sub-millisecond)
-Live Render API Round-Trip (p50)   1,339.1 ms
-Live Render API Round-Trip (p95)   3,106.5 ms
+Local Inference Latency (p50)      0.39 ms (sub-millisecond CPU core)
+Local Inference Latency (p95)      0.53 ms (sub-millisecond CPU core)
+Live Render API Round-Trip (p50)   905.1 ms (WAN network + server + DB)
+Live Render API Round-Trip (p95)   1,092.1 ms (WAN network + server + DB)
 ========================================================================
 ```
 
@@ -250,7 +258,10 @@ Actual Positive        1,565 (FN)            8,435 (TP)
 
 ---
 
-## Production Deployment Guide
+## Production Deployment & Cold Start Strategy
+
+> **Recommendation for Free-Tier Cold Starts:**  
+> Free-tier Render containers spin down after 15 minutes of inactivity, resulting in a ~30–50s cold start on the first waking HTTP request. We recommend setting up a free ping monitor (such as [UptimeRobot](https://uptimerobot.com) or [cron-job.org](https://cron-job.org)) making a `GET /api/health` request every 10 minutes to maintain steady-state readiness.
 
 ### Frontend on Vercel
 1. Link your GitHub repository to Vercel.

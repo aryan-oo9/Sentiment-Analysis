@@ -59,3 +59,27 @@ out/
 *~
 .DS_Store
 Thumbs.db
+
+# Local documentation, audit dossiers & booklets (preserved locally, ignored from git)
+docs/
+screenshots/
+*.docx
+*.pdf
+API_CONTRACT.md
+DEPLOY.md
+PROJECT_UNDERSTANDING_INTERVIEW_DOSSIER.md
+TWEETSENSE_PROJECT_AUDIT.md
+TWEETSENSE_V2_BLUEPRINT.md
+structure.md
+
+# Local legacy scripts, notebooks & test suites (preserved locally, ignored from git)
+backend/analysis_backend.py
+backend/app2.py
+backend/proj.ipynb
+backend/smoke_test.py
+backend/tests/
+frontend/README.md
+frontend/src/App.css
+frontend/src/App.tsx
+frontend/src/assets/
+frontend/src/index.css

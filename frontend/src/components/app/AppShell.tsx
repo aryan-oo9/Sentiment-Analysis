@@ -17,16 +17,16 @@ export const AppShell: React.FC = () => {
   const isProjectView = Boolean(projectId);
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg)] text-[var(--ink)]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[var(--bg)] text-[var(--ink)]">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between p-6">
+      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--surface)] flex flex-col justify-between p-4 md:p-6 shrink-0">
         <div>
-          <div className="mb-8">
+          <div className="mb-6 md:mb-8">
             <Link to="/app" className="text-xl font-black tracking-tight uppercase block">
               TweetSense
             </Link>
-            <span className="text-xs text-[var(--muted)] tracking-wider uppercase block mt-1">
-              Feedback Intelligence
+            <span className="text-xs text-[var(--muted)] block mt-0.5">
+              Feedback intelligence
             </span>
           </div>
 

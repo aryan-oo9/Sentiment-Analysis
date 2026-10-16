@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import type { CommentItem, Project } from "../api/types";
-import { Search, Check, Copy, X } from "lucide-react";
+import { Search, Copy, X } from "lucide-react";
 
 export const Inbox: React.FC = () => {
   const { projectId } = useParams();
@@ -162,12 +162,12 @@ export const Inbox: React.FC = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 w-full">
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 w-full">
       {/* Sample Project Read-Only Banner */}
       {project?.is_demo && (
         <div className="bg-[var(--surface)] border-2 border-[var(--ink)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="bg-[var(--ink)] text-[var(--bg)] text-xs font-black px-2.5 py-1 uppercase tracking-wider">
+            <span className="bg-[var(--ink)] text-[var(--bg)] text-xs font-bold px-2.5 py-1">
               Sample Data
             </span>
             <span className="text-sm font-semibold">
@@ -176,7 +176,7 @@ export const Inbox: React.FC = () => {
           </div>
           <Link
             to="/app"
-            className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors whitespace-nowrap"
+            className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors whitespace-nowrap"
           >
             Create Your Project
           </Link>
@@ -187,7 +187,7 @@ export const Inbox: React.FC = () => {
       <div className="space-y-4 border-b-2 border-[var(--ink)] pb-6">
         <div className="flex justify-between items-baseline">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
+            <span className="text-xs font-bold text-[var(--muted)] block">
               Feedback Operations
             </span>
             <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-1">
@@ -261,7 +261,7 @@ export const Inbox: React.FC = () => {
 
       {/* Dense Comments Table */}
       {loading ? (
-        <div className="py-16 text-center text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+        <div className="py-16 text-center text-xs font-semibold text-[var(--muted)]">
           Loading feedback rows...
         </div>
       ) : comments.length === 0 ? (
@@ -272,8 +272,8 @@ export const Inbox: React.FC = () => {
         <div className="border-2 border-[var(--ink)] bg-[var(--surface)] overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b-2 border-[var(--ink)] bg-[var(--bg)] font-bold uppercase tracking-wider">
-                <th className="p-3 w-32">Verdict</th>
+              <tr className="border-b-2 border-[var(--ink)] bg-[var(--bg)] font-bold text-xs">
+                <th className="p-3 w-32 text-center">Verdict</th>
                 <th className="p-3">Comment Text</th>
                 <th className="p-3 w-36">Triage Priority</th>
                 <th className="p-3 w-28">Source</th>
@@ -317,7 +317,7 @@ export const Inbox: React.FC = () => {
                     {/* Comment Body */}
                     <td className="p-3 align-top font-normal leading-relaxed text-sm">
                       {project?.is_demo && (
-                        <span className="inline-block bg-[var(--ink)] text-[var(--bg)] font-black text-[9px] px-1.5 py-0.5 uppercase tracking-wider mr-2 align-middle">
+                        <span className="inline-block bg-[var(--ink)] text-[var(--bg)] font-bold text-[9px] px-1.5 py-0.5 mr-2 align-middle">
                           Sample Data
                         </span>
                       )}
@@ -398,14 +398,14 @@ export const Inbox: React.FC = () => {
             <div className="space-y-6">
               <div className="flex justify-between items-start border-b border-[var(--border)] pb-4">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+                  <span className="text-xs font-bold text-[var(--muted)]">
                     Inspection Drawer
                   </span>
                   <h2 className="text-xl font-black uppercase tracking-tight">Comment #{selectedComment.id}</h2>
                 </div>
                 <button
                   onClick={() => setSelectedComment(null)}
-                  className="p-1 hover:bg-[var(--surface)] text-[var(--ink)]"
+                  className="p-1 hover:bg-[var(--surface)] text-[var(--ink)] cursor-pointer"
                 >
                   <X size={20} />
                 </button>
@@ -413,7 +413,7 @@ export const Inbox: React.FC = () => {
 
               {/* Original Text */}
               <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Full Text</span>
+                <span className="text-xs font-bold text-[var(--muted)]">Full Text</span>
                 <p className="text-base font-semibold leading-relaxed bg-[var(--surface)] p-4 border border-[var(--border)]">
                   {highlightDrivingWords(selectedComment.text, selectedComment.analysis.top_words)}
                 </p>
@@ -422,26 +422,26 @@ export const Inbox: React.FC = () => {
               {/* Classification Ledger */}
               <div className="border-t border-b border-[var(--ink)] divide-y divide-[var(--border)] text-xs font-mono py-2">
                 <div className="flex justify-between py-2">
-                  <span className="font-sans uppercase font-bold text-[var(--muted)]">Model Sentiment:</span>
+                  <span className="font-sans font-bold text-[var(--muted)]">Model Sentiment:</span>
                   <span className="font-bold">{selectedComment.analysis.sentiment}</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="font-sans uppercase font-bold text-[var(--muted)]">Confidence:</span>
+                  <span className="font-sans font-bold text-[var(--muted)]">Confidence:</span>
                   <span className="font-bold">{(selectedComment.analysis.confidence * 100).toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="font-sans uppercase font-bold text-[var(--muted)]">TextBlob Polarity:</span>
+                  <span className="font-sans font-bold text-[var(--muted)]">TextBlob Polarity:</span>
                   <span className="font-bold">{selectedComment.analysis.polarity}</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="font-sans uppercase font-bold text-[var(--muted)]">Operational Priority:</span>
+                  <span className="font-sans font-bold text-[var(--muted)]">Operational Priority:</span>
                   <span className="font-bold">{selectedComment.analysis.priority} ({selectedComment.analysis.priority_source})</span>
                 </div>
               </div>
 
               {/* Human-in-the-Loop Correction */}
               <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                <span className="text-xs font-bold text-[var(--muted)]">
                   Human Label Correction
                 </span>
                 <div className="flex gap-2">
@@ -464,15 +464,15 @@ export const Inbox: React.FC = () => {
               {/* AI Reply Drafting with Human Approval */}
               <div className="border-t-2 border-[var(--ink)] pt-6 space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[var(--ink)]">
                     Draft Support Reply
                   </span>
-                  <div className="flex gap-1 text-[10px] font-bold uppercase">
+                  <div className="flex gap-1 text-[10px] font-bold">
                     {(["warm", "brief", "formal"] as const).map((t) => (
                       <button
                         key={t}
                         onClick={() => setDraftTone(t)}
-                        className={`px-2 py-0.5 border ${
+                        className={`px-2 py-0.5 border cursor-pointer ${
                           draftTone === t ? "bg-[var(--ink)] text-[var(--bg)]" : "border-[var(--border)]"
                         }`}
                       >
@@ -486,13 +486,13 @@ export const Inbox: React.FC = () => {
                   <button
                     onClick={handleGenerateDraft}
                     disabled={drafting}
-                    className="w-full bg-[var(--surface)] border-2 border-[var(--ink)] py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors"
+                    className="w-full bg-[var(--surface)] border-2 border-[var(--ink)] py-2.5 font-bold text-xs hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors cursor-pointer"
                   >
-                    {drafting ? "Generating Draft..." : `Generate ${draftTone.toUpperCase()} Draft Reply`}
+                    {drafting ? "Generating Draft..." : `Generate ${draftTone} Draft Reply`}
                   </button>
                 ) : (
                   <div className="space-y-3 bg-[var(--surface)] p-4 border border-[var(--ink)]">
-                    <div className="flex justify-between items-center text-[10px] uppercase font-bold text-[var(--muted)]">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-[var(--muted)]">
                       <span>Status: {activeDraft.status}</span>
                       <span>Tone: {activeDraft.tone}</span>
                     </div>
@@ -507,13 +507,13 @@ export const Inbox: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={handleApproveDraft}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--ink)] text-[var(--bg)] py-2 text-xs font-bold uppercase hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--ink)] text-[var(--bg)] py-2 text-xs font-bold hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer"
                       >
-                        <Check size={14} /> Approve Draft
+                        Approve Draft
                       </button>
                       <button
                         onClick={handleCopyDraft}
-                        className="flex-1 flex items-center justify-center gap-1.5 border border-[var(--ink)] py-2 text-xs font-bold uppercase hover:bg-[var(--bg)]"
+                        className="flex-1 flex items-center justify-center gap-1.5 border border-[var(--ink)] py-2 text-xs font-bold hover:bg-[var(--bg)] cursor-pointer"
                       >
                         <Copy size={14} /> {copied ? "Copied!" : "Copy Reply"}
                       </button>

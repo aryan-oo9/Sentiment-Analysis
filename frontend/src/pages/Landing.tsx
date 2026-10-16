@@ -118,7 +118,7 @@ export const Landing: React.FC = () => {
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-none"
+            className="text-5xl sm:text-6xl md:text-7xl font-black uppercase tracking-tighter leading-none"
           >
             Every comment,
           </motion.h1>
@@ -126,7 +126,7 @@ export const Landing: React.FC = () => {
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-6xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter leading-none text-[var(--field-green)]"
+            className="text-5xl sm:text-6xl md:text-7xl font-black uppercase tracking-tighter leading-none text-[var(--field-green)]"
           >
             Sorted.
           </motion.h1>
@@ -263,7 +263,7 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 3. The Live Thing: Headline You Can Type */}
-      <section className="border-4 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-12 space-y-8">
+      <section className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-10 space-y-8">
         <div>
           <span className="text-xs font-mono font-bold text-[var(--muted)] block mb-1">
             Interactive Test Bench
@@ -484,27 +484,27 @@ export const Landing: React.FC = () => {
         </div>
 
         <div className="border-b-2 border-[var(--ink)] divide-y divide-[var(--border)] font-mono text-xs">
-          <div className="flex justify-between items-baseline py-4">
+          <div className="flex justify-between items-baseline px-3 py-3.5">
             <span className="font-sans font-bold uppercase text-[var(--muted)] text-sm">Training Corpus</span>
             <span className="text-xl font-bold text-[var(--ink)]">{evalData.training_dataset}</span>
           </div>
-          <div className="flex justify-between items-baseline py-4 bg-[var(--surface)] px-2">
+          <div className="flex justify-between items-baseline px-3 py-3.5 bg-[var(--surface)]">
             <span className="font-sans font-bold uppercase text-[var(--ink)] text-sm">Validation Test Accuracy</span>
             <span className="text-2xl font-bold text-[var(--ink)]">{evalData.metrics.accuracy_pct}%</span>
           </div>
-          <div className="flex justify-between items-baseline py-4 bg-[var(--surface)] px-2">
+          <div className="flex justify-between items-baseline px-3 py-3.5 bg-[var(--surface)]">
             <span className="font-sans font-bold uppercase text-[var(--ink)] text-sm">Weighted F1 Score</span>
             <span className="text-2xl font-bold text-[var(--ink)]">{evalData.metrics.weighted_f1.toFixed(4)}</span>
           </div>
-          <div className="flex justify-between items-baseline py-4">
+          <div className="flex justify-between items-baseline px-3 py-3.5">
             <span className="font-sans font-bold uppercase text-[var(--muted)] text-sm">Feature Representation</span>
             <span className="text-base font-bold text-[var(--ink)]">{evalData.feature_representation}</span>
           </div>
-          <div className="flex justify-between items-baseline py-4">
+          <div className="flex justify-between items-baseline px-3 py-3.5">
             <span className="font-sans font-bold uppercase text-[var(--muted)] text-sm">Live Endpoint Latency (p50)</span>
             <span className="text-xl font-bold text-[var(--ink)]">{evalData.latency.p50_ms} ms</span>
           </div>
-          <div className="flex justify-between items-baseline py-4">
+          <div className="flex justify-between items-baseline px-3 py-3.5">
             <span className="font-sans font-bold uppercase text-[var(--muted)] text-sm">Pure Local Inference (p50)</span>
             <span className="text-xl font-bold text-[var(--field-green)]">{evalData.latency.inference_p50_ms} ms</span>
           </div>
@@ -538,8 +538,8 @@ export const Landing: React.FC = () => {
       </section>
 
       {/* 7. Monolithic CTA Band */}
-      <section className="bg-[var(--field-green)] text-[var(--accent-ink)] p-12 md:p-16 text-center space-y-4">
-        <h2 className="text-6xl md:text-8xl font-black uppercase tracking-tighter">
+      <section className="bg-[var(--field-green)] text-[var(--accent-ink)] p-10 md:p-14 text-center space-y-4">
+        <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tight">
           Analyze
         </h2>
         <p className="text-base md:text-lg font-bold max-w-xl mx-auto opacity-90">
@@ -555,7 +555,7 @@ export const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* 8. Footer (Contact email as headline at 8-9vw) */}
+      {/* 8. Footer */}
       <footer className="border-t-2 border-[var(--ink)] pt-12 space-y-8">
         <div>
           <span className="text-xs font-mono font-bold text-[var(--muted)] uppercase block mb-1">
@@ -563,7 +563,7 @@ export const Landing: React.FC = () => {
           </span>
           <a
             href="mailto:contact@tweetsense.io"
-            className="text-[8vw] font-black uppercase tracking-tighter text-[var(--ink)] hover:text-[var(--field-green)] transition-colors block leading-none break-all"
+            className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-[var(--ink)] hover:text-[var(--field-green)] transition-colors block leading-tight break-words lowercase"
           >
             contact@tweetsense.io
           </a>

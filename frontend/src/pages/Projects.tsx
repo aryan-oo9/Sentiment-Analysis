@@ -66,10 +66,10 @@ export const Projects: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-12 space-y-12 w-full">
+    <div className="max-w-6xl mx-auto px-6 md:px-8 py-8 space-y-10 w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-2 border-[var(--ink)] pb-6">
         <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
+          <span className="text-xs font-bold text-[var(--muted)] block">
             Workspace Hub
           </span>
           <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight mt-1">
@@ -79,7 +79,7 @@ export const Projects: React.FC = () => {
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-5 py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors"
+          className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-5 py-2.5 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
         >
           <Plus size={16} /> New Workspace
         </button>
@@ -92,7 +92,7 @@ export const Projects: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+        <div className="py-16 text-center text-xs font-semibold text-[var(--muted)]">
           Loading workspaces...
         </div>
       ) : projects.length === 0 ? (
@@ -102,7 +102,7 @@ export const Projects: React.FC = () => {
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors"
+            className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
           >
             Create Your First Workspace
           </button>
@@ -117,11 +117,11 @@ export const Projects: React.FC = () => {
             >
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight group-hover:text-[var(--accent)] transition-colors">
+                  <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight group-hover:text-[var(--field-green)] transition-colors">
                     {project.name}
                   </h2>
                   {project.is_demo && (
-                    <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--bg)] text-[10px] font-bold uppercase tracking-wider">
+                    <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--bg)] text-[10px] font-bold">
                       Sample Data
                     </span>
                   )}
@@ -162,12 +162,12 @@ export const Projects: React.FC = () => {
       {/* New Project Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--bg)] border-4 border-[var(--ink)] p-8 max-w-md w-full space-y-6">
+          <div className="bg-[var(--bg)] border-2 border-[var(--ink)] p-8 max-w-md w-full space-y-6">
             <h3 className="text-2xl font-black uppercase tracking-tight">Create Workspace</h3>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold mb-1">
                   Workspace Name
                 </label>
                 <input
@@ -175,27 +175,27 @@ export const Projects: React.FC = () => {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-[var(--surface)] border border-[var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  className="w-full bg-[var(--surface)] border border-[var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--field-green)]"
                   placeholder="e.g. Q4 Release Feedback"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold mb-1">
                   Description (Optional)
                 </label>
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   rows={2}
-                  className="w-full bg-[var(--surface)] border border-[var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  className="w-full bg-[var(--surface)] border border-[var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--field-green)]"
                   placeholder="e.g. Survey responses and customer service exports"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs font-bold uppercase tracking-wider">
+                  <label className="text-xs font-bold">
                     Neutral Polarity Band (&plusmn;{neutralBand.toFixed(2)})
                   </label>
                   <span className="text-[10px] text-[var(--muted)]">Heuristic threshold</span>
@@ -207,7 +207,7 @@ export const Projects: React.FC = () => {
                   step="0.02"
                   value={neutralBand}
                   onChange={(e) => setNeutralBand(parseFloat(e.target.value))}
-                  className="w-full accent-[var(--ink)]"
+                  className="w-full accent-[var(--ink)] cursor-pointer"
                 />
               </div>
 
@@ -215,14 +215,14 @@ export const Projects: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-[var(--ink)] font-semibold text-xs uppercase"
+                  className="px-4 py-2 border border-[var(--ink)] font-semibold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+                  className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer"
                 >
                   {creating ? "Creating..." : "Create"}
                 </button>

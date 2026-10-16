@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router";
 import { api } from "../api/client";
 import type { Project } from "../api/types";
-import { Copy, Check, Save } from "lucide-react";
+import { Copy, Save } from "lucide-react";
 
 export const Settings: React.FC = () => {
   const { projectId } = useParams();
@@ -66,13 +66,13 @@ export const Settings: React.FC = () => {
   };
 
   if (!project) {
-    return <div className="p-8 text-xs font-semibold uppercase text-[var(--muted)]">Loading settings...</div>;
+    return <div className="p-8 text-xs font-semibold text-[var(--muted)]">Loading settings...</div>;
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-12 w-full">
+    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-10 w-full">
       <div className="border-b-2 border-[var(--ink)] pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
+        <span className="text-xs font-bold text-[var(--muted)] block">
           Configuration
         </span>
         <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight mt-1">
@@ -87,10 +87,10 @@ export const Settings: React.FC = () => {
       )}
 
       {/* General Settings Form */}
-      <form onSubmit={handleSave} className="space-y-6 max-w-xl">
+      <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-            Project Name
+          <label className="block text-xs font-bold mb-1">
+            Project name
           </label>
           <input
             type="text"
@@ -102,7 +102,7 @@ export const Settings: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+          <label className="block text-xs font-bold mb-1">
             Description
           </label>
           <textarea
@@ -117,8 +117,8 @@ export const Settings: React.FC = () => {
         <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4">
           <div className="flex justify-between items-baseline">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider block">
-                Neutral Polarity Band
+              <span className="text-xs font-bold block">
+                Neutral polarity band
               </span>
               <span className="text-xs text-[var(--muted)]">
                 TextBlob polarity scores within &plusmn;{neutralBand.toFixed(2)} trigger Neutral classification.
@@ -145,14 +145,14 @@ export const Settings: React.FC = () => {
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+          className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer"
         >
           <Save size={14} /> {saving ? "Saving..." : "Save Changes"}
         </button>
       </form>
 
       {/* Public Share Link Toggle */}
-      <div className="border-t-2 border-[var(--ink)] pt-8 space-y-4 max-w-xl">
+      <div className="border-t-2 border-[var(--ink)] pt-8 space-y-4 max-w-2xl">
         <h2 className="text-lg font-black uppercase tracking-tight">Public Executive Report</h2>
         <p className="text-xs text-[var(--muted)] leading-relaxed">
           Enable a read-only public link to share aggregate sentiment, themes, and executive briefing with stakeholders without requiring login.
@@ -161,7 +161,7 @@ export const Settings: React.FC = () => {
         <div className="flex items-center gap-4 pt-2">
           <button
             onClick={handleToggleShare}
-            className={`px-4 py-2 font-bold text-xs uppercase tracking-wider border ${
+            className={`px-4 py-2 font-bold text-xs border cursor-pointer ${
               shareToken
                 ? "bg-[var(--field-coral)] text-white border-[var(--field-coral)]"
                 : "bg-[var(--ink)] text-[var(--bg)] border-[var(--ink)]"
@@ -173,9 +173,9 @@ export const Settings: React.FC = () => {
           {shareToken && (
             <button
               onClick={copyShareLink}
-              className="flex items-center gap-1.5 px-4 py-2 border border-[var(--ink)] font-bold text-xs uppercase tracking-wider hover:bg-[var(--surface)]"
+              className="flex items-center gap-1.5 px-4 py-2 border border-[var(--ink)] font-bold text-xs hover:bg-[var(--surface)] cursor-pointer"
             >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
+              <Copy size={14} />
               {copied ? "Copied!" : "Copy URL"}
             </button>
           )}

@@ -19,7 +19,7 @@ export const SharedReport: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-24 text-center text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+      <div className="py-24 text-center text-xs font-semibold text-[var(--muted)]">
         Loading shared report...
       </div>
     );
@@ -30,7 +30,7 @@ export const SharedReport: React.FC = () => {
       <div className="max-w-2xl mx-auto py-24 px-6 text-center space-y-4">
         <h1 className="text-3xl font-black uppercase tracking-tight">Report Unavailable</h1>
         <p className="text-sm text-[var(--muted)]">{error || "The requested link is inactive."}</p>
-        <Link to="/" className="inline-block mt-4 text-xs font-bold underline uppercase">
+        <Link to="/" className="inline-block mt-4 text-xs font-bold underline">
           Go to TweetSense Homepage
         </Link>
       </div>
@@ -40,12 +40,12 @@ export const SharedReport: React.FC = () => {
   const s = report.sentiment_breakdown;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
+    <div className="max-w-4xl mx-auto px-6 py-12 space-y-10">
       <div className="border-b-2 border-[var(--ink)] pb-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
+        <span className="text-xs font-bold text-[var(--muted)] block">
           Public Executive Report
         </span>
-        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight mt-1">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-tight mt-1">
           {report.project_name}
         </h1>
         {report.project_description && (
@@ -55,27 +55,27 @@ export const SharedReport: React.FC = () => {
         )}
       </div>
 
-      <div className="border-4 border-[var(--ink)] bg-[var(--surface)] p-8 md:p-12 space-y-6">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
-          Sentiment Summary ({report.total_comments} Comments Analyzed)
+      <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-8 space-y-6">
+        <span className="text-xs font-bold text-[var(--muted)] block">
+          Sentiment summary ({report.total_comments} comments analyzed)
         </span>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-          <div className="p-6 bg-[var(--field-green)] text-[var(--ink)] border-2 border-[var(--ink)]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div className="p-5 bg-[var(--field-green)] text-[var(--ink)] border border-[var(--ink)]">
             <div className="text-xs font-bold uppercase">Positive Share</div>
-            <div className="text-4xl font-black mt-1">{s.positive_pct}%</div>
+            <div className="text-3xl sm:text-4xl font-black mt-1">{s.positive_pct}%</div>
             <div className="text-xs font-mono mt-2">{s.positive} comments</div>
           </div>
 
-          <div className="p-6 bg-[var(--field-coral)] text-white border-2 border-[var(--ink)]">
+          <div className="p-5 bg-[var(--field-coral)] text-white border border-[var(--ink)]">
             <div className="text-xs font-bold uppercase">Negative Share</div>
-            <div className="text-4xl font-black mt-1">{s.negative_pct}%</div>
+            <div className="text-3xl sm:text-4xl font-black mt-1">{s.negative_pct}%</div>
             <div className="text-xs font-mono mt-2">{s.negative} comments</div>
           </div>
 
-          <div className="p-6 bg-[var(--field-yellow)] text-[var(--ink)] border-2 border-[var(--ink)]">
+          <div className="p-5 bg-[var(--field-yellow)] text-[var(--ink)] border border-[var(--ink)]">
             <div className="text-xs font-bold uppercase">Neutral Share</div>
-            <div className="text-4xl font-black mt-1">{s.neutral_pct}%</div>
+            <div className="text-3xl sm:text-4xl font-black mt-1">{s.neutral_pct}%</div>
             <div className="text-xs font-mono mt-2">{s.neutral} comments</div>
           </div>
         </div>

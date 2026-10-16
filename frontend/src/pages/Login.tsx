@@ -56,8 +56,8 @@ export const Login: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-              Email Address
+            <label className="block text-xs font-bold mb-1">
+              Email address
             </label>
             <input
               type="email"
@@ -70,7 +70,7 @@ export const Login: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+            <label className="block text-xs font-bold mb-1">
               Password {isRegister && <span className="text-[var(--muted)] lowercase font-normal">(min 8 chars)</span>}
             </label>
             <input
@@ -86,7 +86,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--ink)] text-[var(--bg)] py-3 font-bold text-sm uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-50 transition-colors"
+            className="w-full bg-[var(--ink)] text-[var(--bg)] py-3 font-bold text-sm hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] disabled:opacity-50 transition-colors cursor-pointer"
           >
             {loading ? "Processing..." : isRegister ? "Register & Enter" : "Sign In"}
           </button>

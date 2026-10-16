@@ -46,34 +46,34 @@ export const ModelCard: React.FC = () => {
         </div>
 
         <div className="border-b-2 border-[var(--ink)] divide-y divide-[var(--border)] font-mono text-xs">
-          <div className="flex justify-between py-3">
+          <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Model Architecture</span>
             <span className="font-bold">{evalData.model_architecture}</span>
           </div>
-          <div className="flex justify-between py-3">
+          <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Feature Representation</span>
             <span className="font-bold">{evalData.feature_representation}</span>
           </div>
-          <div className="flex justify-between py-3">
+          <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Training Set Size</span>
             <span className="font-bold">{evalData.training_dataset}</span>
           </div>
-          <div className="flex justify-between py-3 bg-[var(--surface)] px-2">
+          <div className="flex justify-between px-3 py-3 bg-[var(--surface)]">
             <span className="font-sans font-bold uppercase text-[var(--ink)]">Validation Accuracy</span>
             <span className="font-bold text-[var(--ink)] text-sm">{metrics.accuracy_pct}%</span>
           </div>
-          <div className="flex justify-between py-3 bg-[var(--surface)] px-2">
+          <div className="flex justify-between px-3 py-3 bg-[var(--surface)]">
             <span className="font-sans font-bold uppercase text-[var(--ink)]">Weighted F1 Score</span>
             <span className="font-bold text-[var(--ink)] text-sm">{metrics.weighted_f1.toFixed(4)}</span>
           </div>
-          <div className="flex justify-between py-3">
+          <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Negative Class (0)</span>
             <span>
               Prec: {metrics.per_class.negative.precision.toFixed(4)} | Rec:{" "}
               {metrics.per_class.negative.recall.toFixed(4)} | F1: {metrics.per_class.negative.f1.toFixed(4)}
             </span>
           </div>
-          <div className="flex justify-between py-3">
+          <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Positive Class (4)</span>
             <span>
               Prec: {metrics.per_class.positive.precision.toFixed(4)} | Rec:{" "}

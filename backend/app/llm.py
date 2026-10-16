@@ -155,45 +155,61 @@ class LLMService:
         }
 
     def generate_reply_draft(self, comment_text: str, sentiment: str, tone: str = "warm") -> dict:
-        """Drafts a customer support reply requiring human approval."""
+        """Drafts a customer support reply with Pydantic validation, 8s timeout, one retry, and clear unavailable state (no fake text)."""
+        import time
+        import logging
+        logger = logging.getLogger(__name__)
+
+        start_time = time.perf_counter()
+
         prompt = (
-            f"Write a {tone} customer support reply to this user comment.\n"
-            f"Comment: \"{comment_text}\"\n"
-            f"Sentiment: {sentiment}\n"
-            f"Tone: {tone}\n"
-            f"Keep it concise (2-3 sentences), empathetic, and professional. Return only the reply text."
+            f"You are a professional customer support representative. Write a {tone} reply draft to this comment.\n"
+            f"Customer Comment: \"{comment_text}\"\n"
+            f"Detected Sentiment: {sentiment}\n"
+            f"Selected Tone: {tone}\n"
+            f"Guidelines: Concise (2-3 sentences), empathetic, directly addresses feedback. Output JSON ONLY with schema:\n"
+            f'{{"draft": "the reply text here", "tone": "{tone}"}}'
         )
+
         if self.api_key:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 150}
-                }
-                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
-                    res_json = json.loads(response.read().decode("utf-8"))
-                    raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    return {"draft": raw_text, "tone": tone}
-            except Exception as e:
-                print(f"[LLMService] Reply draft generation failed: {e}")
+            for attempt in range(2):
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 200}
+                    }
+                    req = urllib.request.Request(
+                        url,
+                        data=json.dumps(payload).encode("utf-8"),
+                        headers={"Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                        res_json = json.loads(response.read().decode("utf-8"))
+                        raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+                        parsed = json.loads(raw_text)
+                        validated = ReplyDraftResult(**parsed)
+                        latency_ms = (time.perf_counter() - start_time) * 1000
+                        logger.info(f"[LLMService] Reply draft generated in {latency_ms:.1f}ms (attempt {attempt+1})")
+                        return {
+                            "status": "success",
+                            "draft": validated.draft,
+                            "tone": validated.tone,
+                            "latency_ms": round(latency_ms, 2)
+                        }
+                except Exception as e:
+                    logger.warning(f"[LLMService] Reply draft attempt {attempt+1} failed: {e}")
 
-        # Rule-based fallback drafts by tone
-        if sentiment == "Negative":
-            if tone == "brief":
-                draft = "Thanks for the feedback. We're actively investigating this issue and will have an update shortly."
-            elif tone == "formal":
-                draft = "We sincerely apologize for the inconvenience experienced. Our technical team is reviewing the matter to ensure resolution."
-            else:
-                draft = "We are really sorry for the trouble this caused! Our team is already looking into it to get this fixed for you right away."
-        else:
-            if tone == "brief":
-                draft = "Thank you for sharing your experience! We appreciate the support."
-            elif tone == "formal":
-                draft = "We appreciate your positive evaluation of our platform and thank you for your patronage."
-            else:
-                draft = "Thanks so much for the kind words! It made our day. Let us know if you ever need any assistance."
-
-        return {"draft": draft, "tone": tone}
+        # If LLM generation failed or no API key, return a clear unavailable state (NO FAKE TEXT)
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(f"[LLMService] Reply draft unavailable after {latency_ms:.1f}ms")
+        return {
+            "status": "unavailable",
+            "draft": None,
+            "tone": tone,
+            "message": "AI reply draft is currently unavailable. No LLM provider reachable.",
+            "latency_ms": round(latency_ms, 2)
+        }
 
 llm_service = LLMService()

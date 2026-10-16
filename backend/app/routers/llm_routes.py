@@ -33,6 +33,12 @@ def create_reply_draft(
     sentiment = comment.analysis.sentiment if comment.analysis else "Neutral"
     res = llm_service.generate_reply_draft(comment.text, sentiment=sentiment, tone=data.tone)
 
+    if res.get("status") == "unavailable" or not res.get("draft"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=res.get("message", "AI reply generation is currently unavailable. No LLM provider reachable.")
+        )
+
     draft = ReplyDraft(
         comment_id=comment.id,
         tone=data.tone,
@@ -52,7 +58,8 @@ def create_reply_draft(
             "tone": draft.tone,
             "body": draft.body,
             "status": draft.status,
-            "created_at": draft.created_at.isoformat()
+            "created_at": draft.created_at.isoformat(),
+            "latency_ms": res.get("latency_ms", 0.0)
         }
     }
 

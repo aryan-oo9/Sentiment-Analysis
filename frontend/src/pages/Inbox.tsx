@@ -25,6 +25,7 @@ export const Inbox: React.FC = () => {
   const [draftTone, setDraftTone] = useState<"warm" | "brief" | "formal">("warm");
   const [activeDraft, setActiveDraft] = useState<any | null>(null);
   const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const fetchComments = async () => {
@@ -93,11 +94,12 @@ export const Inbox: React.FC = () => {
       return;
     }
     setDrafting(true);
+    setDraftError(null);
     try {
       const draft = await api.createReplyDraft(selectedComment.id, draftTone);
       setActiveDraft(draft);
     } catch (err: any) {
-      alert(err.message || "Failed to generate reply draft");
+      setDraftError(err.message || "AI reply draft is currently unavailable. (LLM service unconfigured or timed out).");
     } finally {
       setDrafting(false);
     }
@@ -482,6 +484,12 @@ export const Inbox: React.FC = () => {
                   </div>
                 </div>
 
+                {draftError && (
+                  <div className="p-3 bg-[var(--field-coral)]/10 border border-[var(--field-coral)] text-[var(--field-coral)] text-xs font-medium">
+                    {draftError}
+                  </div>
+                )}
+
                 {!activeDraft ? (
                   <button
                     onClick={handleGenerateDraft}
@@ -493,8 +501,12 @@ export const Inbox: React.FC = () => {
                 ) : (
                   <div className="space-y-3 bg-[var(--surface)] p-4 border border-[var(--ink)]">
                     <div className="flex justify-between items-center text-[10px] font-bold text-[var(--muted)]">
-                      <span>Status: {activeDraft.status}</span>
-                      <span>Tone: {activeDraft.tone}</span>
+                      <span className="bg-[var(--ink)] text-[var(--bg)] px-1.5 py-0.5 text-[9px] font-bold">
+                        AI-generated draft
+                      </span>
+                      <span className="capitalize font-mono">
+                        Status: <strong className="text-[var(--ink)]">{activeDraft.status}</strong>
+                      </span>
                     </div>
 
                     <textarea
@@ -507,9 +519,10 @@ export const Inbox: React.FC = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={handleApproveDraft}
-                        className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--ink)] text-[var(--bg)] py-2 text-xs font-bold hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer"
+                        disabled={activeDraft.status === "approved" || activeDraft.status === "copied"}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--ink)] text-[var(--bg)] py-2 text-xs font-bold hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] disabled:opacity-50 cursor-pointer"
                       >
-                        Approve Draft
+                        {activeDraft.status === "approved" || activeDraft.status === "copied" ? "Approved" : "Approve Draft"}
                       </button>
                       <button
                         onClick={handleCopyDraft}
@@ -519,7 +532,7 @@ export const Inbox: React.FC = () => {
                       </button>
                     </div>
                     <p className="text-[10px] text-[var(--muted)] text-center">
-                      Human approval required. Replies are never auto-sent.
+                      Human approval required. Nothing is ever sent to customers automatically.
                     </p>
                   </div>
                 )}

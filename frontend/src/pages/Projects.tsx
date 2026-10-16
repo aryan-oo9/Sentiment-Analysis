@@ -119,54 +119,83 @@ export const Projects: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="divide-y-2 divide-[var(--border)]">
-          {projects.map((project) => (
-            <Link
-              key={project.id}
-              to={`/app/p/${project.id}`}
-              className="group py-6 flex flex-col md:flex-row justify-between items-start md:items-baseline gap-4 hover:bg-[var(--surface)] transition-colors px-4 -mx-4"
-            >
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight group-hover:text-[var(--field-green)] transition-colors">
-                    {project.name}
-                  </h2>
-                  {project.is_demo && (
-                    <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--bg)] text-[10px] font-bold">
-                      Sample Data
-                    </span>
-                  )}
-                  <ArrowUpRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                {project.description && (
-                  <p className="text-xs text-[var(--muted)] mt-1 max-w-xl line-clamp-1">
-                    {project.description}
-                  </p>
-                )}
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-[var(--muted)] pb-2 font-mono border-b border-[var(--border)]">
+            <span className="uppercase tracking-wider">Available Workspaces ({projects.length})</span>
+            <span className="uppercase tracking-wider">Activity & Telemetry</span>
+          </div>
 
-              <div className="flex items-center gap-6 text-sm font-mono self-end md:self-auto">
-                <div className="text-right">
-                  <span className="font-bold">{project.total_comments || 0}</span> comments
-                  {typeof project.negative_percentage === "number" && (
-                    <span className="text-xs text-[var(--field-coral)] font-bold ml-2">
-                      ({project.negative_percentage}% negative)
-                    </span>
-                  )}
-                </div>
+          <div className="grid grid-cols-1 gap-4">
+            {projects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/app/p/${project.id}`}
+                className="group relative block border border-[var(--border)] bg-[var(--surface)] p-6 hover:border-[var(--ink)] transition-all duration-150 cursor-pointer shadow-xs hover:shadow-sm"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  {/* Left Column: Metadata, Title, Description */}
+                  <div className="space-y-2.5 max-w-2xl">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-[10px] text-[var(--muted)] border border-[var(--border)] bg-[var(--bg)] px-2 py-0.5">
+                        WS-{String(project.id).padStart(2, "0")}
+                      </span>
+                      {project.is_demo ? (
+                        <span className="px-2 py-0.5 bg-[var(--ink)] text-[var(--bg)] text-[10px] font-bold uppercase tracking-wider">
+                          Sample Data
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 border border-[var(--border)] bg-[var(--bg)] text-[10px] font-mono text-[var(--muted)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--field-green)]"></span>
+                          Custom
+                        </span>
+                      )}
+                    </div>
 
-                {!project.is_demo && (
-                  <button
-                    onClick={(e) => handleDelete(e, project.id)}
-                    className="text-[var(--muted)] hover:text-[var(--field-coral)] transition-colors p-1"
-                    title="Delete Project"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            </Link>
-          ))}
+                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-[var(--ink)] group-hover:text-[var(--field-green)] transition-colors leading-tight">
+                      {project.name}
+                    </h2>
+
+                    {project.description && (
+                      <p className="text-xs text-[var(--muted)] line-clamp-2 leading-relaxed">
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right Column: Volume, Sentiment, Action */}
+                  <div className="flex items-center gap-6 self-end md:self-center shrink-0">
+                    <div className="text-right font-mono">
+                      <div className="text-sm font-bold text-[var(--ink)]">
+                        {project.total_comments || 0}{" "}
+                        <span className="text-xs font-normal text-[var(--muted)]">comments</span>
+                      </div>
+                      {typeof project.negative_percentage === "number" && (
+                        <div className="inline-block mt-1 px-1.5 py-0.5 bg-[var(--field-coral)]/10 border border-[var(--field-coral)]/30 text-[11px] text-[var(--field-coral)] font-bold">
+                          {project.negative_percentage}% negative
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {!project.is_demo && (
+                        <button
+                          onClick={(e) => handleDelete(e, project.id)}
+                          className="text-[var(--muted)] hover:text-[var(--field-coral)] transition-colors p-2 cursor-pointer"
+                          title="Delete Project"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      <div className="flex items-center gap-1.5 border border-[var(--ink)] px-3 py-2 bg-[var(--bg)] group-hover:bg-[var(--field-green)] group-hover:text-[var(--accent-ink)] transition-colors font-mono text-xs font-bold uppercase tracking-wider">
+                        <span>Open</span>
+                        <ArrowUpRight size={14} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

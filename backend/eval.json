@@ -1,0 +1,73 @@
+{
+  "version": "2.0.0",
+  "evaluated_at": "2026-10-16T10:28:37Z",
+  "git_commit": "13d864c",
+  "evaluation_seed": 42,
+  "sample_size": 20000,
+  "classes_evaluated": [
+    "Negative (0)",
+    "Positive (4)"
+  ],
+  "model_architecture": "Scikit-Learn Logistic Regression (liblinear solver)",
+  "feature_representation": "TF-IDF Sparse Matrix (500,000 unigrams & bigrams)",
+  "training_dataset": "Sentiment140 (1,600,000 processed tweets, Stanford 2009)",
+  "metrics": {
+    "accuracy": 0.7999,
+    "accuracy_pct": 79.99,
+    "weighted_f1": 0.7995,
+    "per_class": {
+      "negative": {
+        "precision": 0.8285,
+        "recall": 0.7563,
+        "f1": 0.7908,
+        "support": 10000
+      },
+      "positive": {
+        "precision": 0.7758,
+        "recall": 0.8435,
+        "f1": 0.8083,
+        "support": 10000
+      }
+    },
+    "confusion_matrix": {
+      "true_negative": 7563,
+      "false_positive": 2437,
+      "false_negative": 1565,
+      "true_positive": 8435
+    }
+  },
+  "latency": {
+    "endpoint": "https://sentiment-analysis-tm33.onrender.com/api/demo/analyze",
+    "sampled_requests": 20,
+    "p50_ms": 1339.1,
+    "p95_ms": 3106.5,
+    "mean_ms": 1721.6,
+    "min_ms": 525.0,
+    "max_ms": 6340.7,
+    "status": "measured_live",
+    "inference_p50_ms": 0.41,
+    "inference_p95_ms": 0.65
+  },
+  "neutral_handling": {
+    "method": "TextBlob Polarity Threshold Band (\u00b10.10)",
+    "learned_by_model": false,
+    "note": "Sentiment140 contains only binary positive and negative labels. Neutral is an unlearned heuristic overlay applied when TextBlob polarity lands between -0.10 and +0.10 and is excluded from binary metrics."
+  },
+  "known_limitations": [
+    {
+      "id": "neutral_heuristic",
+      "title": "Neutrality is a heuristic, not an ML classification",
+      "detail": "Sentiment140 contains only binary positive and negative tweets. Neutral outputs are triggered when TextBlob polarity falls within [-0.10, +0.10]. Users can adjust or disable this band."
+    },
+    {
+      "id": "sarcasm",
+      "title": "Inability to parse sarcasm and inverted irony",
+      "detail": "Sarcastic comments like 'Oh great, another outage right at checkout!' have strongly positive lexical weights ('great') which misclassify negative intent."
+    },
+    {
+      "id": "distribution_shift",
+      "title": "2009 Training Data Distribution Shift",
+      "detail": "Trained on 2009 Twitter data, modern internet slang ('cooked', 'mid', 'goat', 'rizz') and newer emojis are out-of-vocabulary with zero weight."
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+import re
+import json
+import urllib.request
+import urllib.error
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from .config import Config
+
+class PriorityResult(BaseModel):
+    priority: str = Field(..., pattern="^(High Priority|Medium Priority|Low Priority)$")
+    reason: str = Field(..., max_length=200)
+
+class BriefingResult(BaseModel):
+    headline: str
+    top_issues: List[str] = Field(default_factory=list, max_length=5)
+    suggested_actions: List[str] = Field(default_factory=list, max_length=5)
+
+class ReplyDraftResult(BaseModel):
+    draft: str
+    tone: str
+
+class LLMService:
+    def __init__(self):
+        self.api_key = Config.LLM_API_KEY
+        self.provider = Config.LLM_PROVIDER
+        self.model = Config.LLM_MODEL
+        self.timeout_sec = 8.0
+
+    def classify_priority(self, text: str, sentiment: str = "Neutral") -> dict:
+        """
+        Classifies operational priority with Pydantic validation, 8s timeout,
+        1 retry, and deterministic rule-based fallback.
+        """
+        if self.api_key:
+            for attempt in range(2):
+                try:
+                    res = self._call_llm_priority(text, sentiment)
+                    if res:
+                        return {
+                            "priority": res.priority,
+                            "priority_reason": res.reason,
+                            "priority_source": "llm"
+                        }
+                except Exception as e:
+                    print(f"[LLMService] Priority API attempt {attempt+1} failed: {e}")
+
+        # Deterministic rule-based fallback
+        return self._rule_based_priority(text, sentiment)
+
+    def _rule_based_priority(self, text: str, sentiment: str) -> dict:
+        lower = text.lower()
+        high_signals = [
+            "crash", "crashes", "broke", "broken", "freeze", "frozen", "down",
+            "fail", "failed", "cannot login", "can't login", "refund", "charge",
+            "charged", "scam", "billing", "urgent", "security", "lost", "exploit"
+        ]
+        medium_signals = [
+            "slow", "lag", "bug", "issue", "problem", "pricing", "expensive",
+            "cancel", "confusing", "support", "help", "question", "missing", "please"
+        ]
+
+        if any(re.search(rf"\b{re.escape(w)}\b", lower) for w in high_signals):
+            return {
+                "priority": "High Priority",
+                "priority_reason": "Contains critical operational failure or account-blocking keywords.",
+                "priority_source": "rules"
+            }
+        
+        if any(re.search(rf"\b{re.escape(w)}\b", lower) for w in medium_signals) or sentiment == "Negative":
+            return {
+                "priority": "Medium Priority",
+                "priority_reason": "Contains negative user experience feedback or workflow inquiries.",
+                "priority_source": "rules"
+            }
+
+        return {
+            "priority": "Low Priority",
+            "priority_reason": "General observation or positive experience with no immediate triage needed.",
+            "priority_source": "rules"
+        }
+
+    def _call_llm_priority(self, text: str, sentiment: str) -> Optional[PriorityResult]:
+        # Google Gemini REST call
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        prompt = (
+            f"You are a customer feedback triage officer. Analyze this comment:\n"
+            f"Comment: \"{text}\"\n"
+            f"Sentiment: {sentiment}\n\n"
+            f"Respond ONLY with a JSON object in this format:\n"
+            f'{{"priority": "High Priority"|"Medium Priority"|"Low Priority", "reason": "brief 1-sentence rationale"}}'
+        )
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100}
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        
+        with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+            res_json = json.loads(response.read().decode("utf-8"))
+            raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+            # Clean markdown code blocks if present
+            raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+            parsed = json.loads(raw_text)
+            return PriorityResult(**parsed)
+
+    def generate_briefing(self, stats: dict, top_comments: List[str]) -> dict:
+        """Generates an executive briefing over aggregate project metrics."""
+        sample_str = "\n".join(f"- {c}" for c in top_comments[:10])
+        prompt = (
+            f"Review these customer feedback metrics:\n"
+            f"Total Comments: {stats.get('total_comments', 0)}\n"
+            f"Positive: {stats.get('positive_pct', 0)}%, Negative: {stats.get('negative_pct', 0)}%\n"
+            f"Sample Inquiries:\n{sample_str}\n\n"
+            f"Generate a briefing JSON:\n"
+            f'{{"headline": "one powerful summary sentence", "top_issues": ["issue 1", "issue 2", "issue 3"], '
+            f'"suggested_actions": ["action 1", "action 2", "action 3"]}}'
+        )
+        if self.api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 300}
+                }
+                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                    res_json = json.loads(response.read().decode("utf-8"))
+                    raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+                    parsed = json.loads(raw_text)
+                    return BriefingResult(**parsed).model_dump()
+            except Exception as e:
+                print(f"[LLMService] Briefing generation failed: {e}")
+
+        # Deterministic fallback briefing
+        neg_pct = stats.get("negative_pct", 0)
+        headline = (
+            f"Customer sentiment requires attention with {neg_pct}% negative feedback recorded."
+            if neg_pct > 50 else
+            "Feedback indicates steady satisfaction across core product features."
+        )
+        return {
+            "headline": headline,
+            "top_issues": [
+                "Unresolved inquiries flagged under high priority",
+                "Product friction reported in negative comments",
+                "Onboarding or interface experience questions"
+            ],
+            "suggested_actions": [
+                "Review High Priority comments in the inbox",
+                "Acknowledge recurring issues with drafted responses",
+                "Track sentiment trend following the next deployment"
+            ]
+        }
+
+    def generate_reply_draft(self, comment_text: str, sentiment: str, tone: str = "warm") -> dict:
+        """Drafts a customer support reply requiring human approval."""
+        prompt = (
+            f"Write a {tone} customer support reply to this user comment.\n"
+            f"Comment: \"{comment_text}\"\n"
+            f"Sentiment: {sentiment}\n"
+            f"Tone: {tone}\n"
+            f"Keep it concise (2-3 sentences), empathetic, and professional. Return only the reply text."
+        )
+        if self.api_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.3, "maxOutputTokens": 150}
+                }
+                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                    res_json = json.loads(response.read().decode("utf-8"))
+                    raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    return {"draft": raw_text, "tone": tone}
+            except Exception as e:
+                print(f"[LLMService] Reply draft generation failed: {e}")
+
+        # Rule-based fallback drafts by tone
+        if sentiment == "Negative":
+            if tone == "brief":
+                draft = "Thanks for the feedback. We're actively investigating this issue and will have an update shortly."
+            elif tone == "formal":
+                draft = "We sincerely apologize for the inconvenience experienced. Our technical team is reviewing the matter to ensure resolution."
+            else:
+                draft = "We are really sorry for the trouble this caused! Our team is already looking into it to get this fixed for you right away."
+        else:
+            if tone == "brief":
+                draft = "Thank you for sharing your experience! We appreciate the support."
+            elif tone == "formal":
+                draft = "We appreciate your positive evaluation of our platform and thank you for your patronage."
+            else:
+                draft = "Thanks so much for the kind words! It made our day. Let us know if you ever need any assistance."
+
+        return {"draft": draft, "tone": tone}
+
+llm_service = LLMService()

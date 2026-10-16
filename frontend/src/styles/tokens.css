@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: #e6e0d2;
+    --surface: #dcd5c5;
+    --ink: #1a1a1a;
+    --muted: #5f5b52;
+    --accent: #18bc42;
+    --accent-ink: #1a1a1a;
+    --border: #c8c0af;
+
+    /* Semantic Sentiment Fields (Traffic Light) */
+    --field-coral: #ed4b44;
+    --field-green: #18bc42;
+    --field-yellow: #f2c21a;
+    --field-black: #1a1a1a;
+    --field-bone: #e6e0d2;
+
+    /* Square corners everywhere */
+    --radius: 0px;
+
+    /* Typography */
+    --font-display: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
+    --font-body: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  [data-theme="night"] {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --ink: #e6e0d2;
+    --muted: #8c877d;
+    --accent: #18bc42;
+    --accent-ink: #1a1a1a;
+    --border: #333333;
+
+    --field-coral: #ed4b44;
+    --field-green: #18bc42;
+    --field-yellow: #f2c21a;
+    --field-black: #1a1a1a;
+    --field-bone: #242424;
+  }
+
+  * {
+    border-radius: var(--radius);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .display-type {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+  }
+}

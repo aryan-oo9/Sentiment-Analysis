@@ -1,0 +1,34 @@
+```
+└── 📁TweetSense
+    └── 📁backend
+        ├── analysis_backend.py
+        ├── app2.py
+        ├── proj.ipynb
+        ├── trained_model.sav
+        ├── training.1600000.processed.noemoticon.csv
+        ├── twitter_data_lemmatized.csv
+        ├── vectorizer.sav
+    └── 📁frontend
+        └── 📁app
+            ├── favicon.ico
+            ├── globals.css
+            ├── layout.tsx
+            ├── page.tsx
+        └── 📁components
+            ├── SentimentHomePage.tsx
+        └── 📁public
+            ├── file.svg
+            ├── globe.svg
+            ├── next.svg
+            ├── vercel.svg
+            ├── window.svg
+        ├── .gitignore
+        ├── eslint.config.mjs
+        ├── next-env.d.ts
+        ├── next.config.ts
+        ├── package-lock.json
+        ├── package.json
+        ├── postcss.config.mjs
+        ├── README.md
+        └── tsconfig.json
+```

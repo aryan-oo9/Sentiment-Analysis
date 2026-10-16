@@ -12,6 +12,16 @@ from ..llm import llm_service
 
 public_router = APIRouter(tags=["public"])
 
+@public_router.get("/")
+def root():
+    return {
+        "name": "TweetSense API",
+        "version": "2.0.0",
+        "status": "online",
+        "documentation": "/docs",
+        "health": "/api/health"
+    }
+
 # In-memory IP rate limiter: max 30 requests per 60 seconds
 _RATE_LIMIT = defaultdict(list)
 MAX_PER_MINUTE = 30

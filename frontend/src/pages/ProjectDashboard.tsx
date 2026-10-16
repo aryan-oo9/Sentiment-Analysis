@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import type { Project, ProjectStats, ExecutiveBriefing, ThemeItem } from "../api/types";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Download, Globe } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 
 export const ProjectDashboard: React.FC = () => {
@@ -17,11 +17,14 @@ export const ProjectDashboard: React.FC = () => {
 
   // Ingestion Modal State
   const [showIngest, setShowIngest] = useState(false);
-  const [ingestMode, setIngestMode] = useState<"paste" | "csv">("paste");
+  const [ingestMode, setIngestMode] = useState<"paste" | "csv" | "hn">("paste");
   const [pasteText, setPasteText] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [textColumn, setTextColumn] = useState("");
+  const [hnQuery, setHnQuery] = useState("");
+  const [hnLimit, setHnLimit] = useState(20);
   const [ingesting, setIngesting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -64,17 +67,24 @@ export const ProjectDashboard: React.FC = () => {
           id,
           lines.map((text) => ({ text, source: "paste" }))
         );
-      } else {
+      } else if (ingestMode === "csv") {
         if (!csvFile) throw new Error("Please select a CSV file");
         const fd = new FormData();
         fd.append("file", csvFile);
         if (textColumn) fd.append("text_column", textColumn);
         await api.importCsv(id, fd);
+      } else if (ingestMode === "hn") {
+        if (!hnQuery.trim()) throw new Error("Please enter a Hacker News search query");
+        const res = await api.pullHn(id, hnQuery.trim(), hnLimit);
+        if (res.ingested_count === 0) {
+          alert("No matching Hacker News comments found for your query.");
+        }
       }
 
       setShowIngest(false);
       setPasteText("");
       setCsvFile(null);
+      setHnQuery("");
       loadData();
     } catch (err: any) {
       alert(err.message || "Failed to ingest feedback");
@@ -82,6 +92,18 @@ export const ProjectDashboard: React.FC = () => {
       setIngesting(false);
     }
   };
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      await api.downloadExportCsv(id, `${project?.name.toLowerCase().replace(/\s+/g, '_')}_export.csv`);
+    } catch (err: any) {
+      alert(err.message || "Failed to export CSV");
+    } finally {
+      setExporting(false);
+    }
+  };
+
 
   // Skeleton Loader (Surface-toned to prevent layout shifts)
   if (loading || !project || !stats) {
@@ -142,6 +164,15 @@ export const ProjectDashboard: React.FC = () => {
           >
             Open Triage Inbox
           </Link>
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting}
+            className="border-2 border-[var(--ink)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--surface)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Download CSV export with sanitized cells"
+          >
+            <Download size={14} />
+            {exporting ? "Exporting..." : "Export CSV"}
+          </button>
           <button
             onClick={() => {
               if (project.is_demo) {
@@ -425,6 +456,13 @@ export const ProjectDashboard: React.FC = () => {
                 >
                   Upload CSV
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setIngestMode("hn")}
+                  className={`px-3 py-1 cursor-pointer flex items-center gap-1 ${ingestMode === "hn" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
+                >
+                  <Globe size={12} /> Hacker News
+                </button>
               </div>
             </div>
 
@@ -443,7 +481,7 @@ export const ProjectDashboard: React.FC = () => {
                     placeholder="App crashes whenever I open settings&#10;Fantastic customer support experience&#10;Shipping was slightly delayed"
                   />
                 </div>
-              ) : (
+              ) : ingestMode === "csv" ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold mb-1">
@@ -470,6 +508,38 @@ export const ProjectDashboard: React.FC = () => {
                     />
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">
+                      Hacker News Search Query
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={hnQuery}
+                      onChange={(e) => setHnQuery(e.target.value)}
+                      placeholder="e.g. Supabase, TweetSense, Stripe"
+                      className="w-full bg-[var(--surface)] border border-[var(--ink)] p-2.5 text-xs focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">
+                      Max Comments to Pull (1 to 50)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={hnLimit}
+                      onChange={(e) => setHnLimit(Math.min(50, Math.max(1, Number(e.target.value) || 20)))}
+                      className="w-full bg-[var(--surface)] border border-[var(--ink)] p-2 text-xs"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--muted)] leading-relaxed border-l-2 border-[var(--ink)] pl-2">
+                    Queries Algolia Hacker News search API server-side. HTML entities are stripped, timestamps preserved, and comments classified through the full sentiment & triage pipeline. Rate limit: 10 pulls/min.
+                  </p>
+                </div>
               )}
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border)]">
@@ -483,9 +553,9 @@ export const ProjectDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={ingesting}
-                  className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer"
+                  className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] cursor-pointer disabled:opacity-50"
                 >
-                  {ingesting ? "Analyzing & Ingesting..." : "Analyze & Ingest"}
+                  {ingesting ? (ingestMode === "hn" ? "Pulling from HN..." : "Analyzing & Ingesting...") : (ingestMode === "hn" ? "Pull & Ingest" : "Analyze & Ingest")}
                 </button>
               </div>
             </form>

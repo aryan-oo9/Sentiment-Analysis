@@ -44,3 +44,9 @@ class ReplyDraftUpdateSchema(BaseModel):
 
 class DemoAnalyzeSchema(BaseModel):
     text: str = Field(..., min_length=2, max_length=1000)
+
+class PullRequestSchema(BaseModel):
+    source: str = Field(..., pattern="^hn$")
+    query: str = Field(..., min_length=1, max_length=100)
+    limit: Optional[int] = Field(20, ge=1, le=50)
+

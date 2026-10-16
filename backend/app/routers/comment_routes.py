@@ -1,4 +1,12 @@
 import io
+import time
+import re
+import html
+import json
+import socket
+import urllib.request
+import urllib.error
+import urllib.parse
 from datetime import datetime, timezone
 from typing import Optional
 import pandas as pd
@@ -8,12 +16,37 @@ from sqlalchemy import or_
 
 from ..database import get_db
 from ..models import User, Project, Comment, Analysis, Correction, Ticket
-from ..schemas import IngestCommentsSchema, CorrectionSchema, TicketUpdateSchema
+from ..schemas import IngestCommentsSchema, CorrectionSchema, TicketUpdateSchema, PullRequestSchema
 from ..auth import get_current_user
 from ..ml import ml_engine
 from ..llm import llm_service
 
 comment_router = APIRouter(prefix="/api", tags=["comments"])
+
+_pull_rate_limit: dict = {}
+
+def check_pull_rate_limit(user_id: int, max_requests: int = 10, window_sec: int = 60):
+    now = time.time()
+    user_timestamps = _pull_rate_limit.get(user_id, [])
+    recent = [t for t in user_timestamps if now - t < window_sec]
+    if len(recent) >= max_requests:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Max 10 pulls per minute."
+        )
+    recent.append(now)
+    _pull_rate_limit[user_id] = recent
+
+def clean_hn_html(raw_html: str) -> str:
+    """Clean Hacker News comment HTML tags and entities."""
+    if not raw_html:
+        return ""
+    text = re.sub(r'<br\s*/?>', '\n', raw_html, flags=re.I)
+    text = re.sub(r'</?p>', '\n', text, flags=re.I)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = html.unescape(text)
+    text = re.sub(r'[ \t]+', ' ', text).strip()
+    return text
 
 @comment_router.post("/projects/{project_id}/comments", status_code=201)
 def ingest_pasted_comments(
@@ -410,3 +443,154 @@ def update_ticket(
             "note": ticket.note
         }
     }
+
+@comment_router.post("/projects/{project_id}/pull", status_code=200)
+def pull_comments_from_source(
+    project_id: int,
+    data: PullRequestSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        (Project.user_id == current_user.id) | (Project.is_demo == True)
+    ).first()
+
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.is_demo or current_user.email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sample data, read-only. Create your own project to edit."
+        )
+
+    # Server-side rate limit (10 pulls / min)
+    check_pull_rate_limit(current_user.id)
+
+    # Query Algolia HN API
+    url = f"https://hn.algolia.com/api/v1/search?query={urllib.parse.quote_plus(data.query)}&tags=comment&hitsPerPage={data.limit}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "TweetSense/2.0 (Sentiment Analysis Platform)",
+            "Accept": "application/json"
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=8.0) as resp:
+            body = resp.read().decode("utf-8")
+            res_json = json.loads(body)
+    except urllib.error.HTTPError as he:
+        if he.code == 429:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Hacker News Algolia rate limit exceeded. Please wait a moment."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Hacker News API returned error {he.code}."
+        )
+    except (urllib.error.URLError, TimeoutError, socket.timeout):
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Hacker News API timed out. Please try again."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to query Hacker News: {str(e)}"
+        )
+
+    hits = res_json.get("hits", [])
+    if not hits:
+        return {
+            "status": "success",
+            "message": "No matching Hacker News comments found for query",
+            "data": {
+                "ingested_count": 0,
+                "items": []
+            }
+        }
+
+    saved_items = []
+    for hit in hits:
+        raw_html = hit.get("comment_text") or hit.get("story_text") or hit.get("title") or ""
+        text = clean_hn_html(raw_html)
+        if len(text) < 2:
+            continue
+
+        posted_at = None
+        if hit.get("created_at"):
+            try:
+                iso_str = hit["created_at"].replace("Z", "+00:00")
+                posted_at = datetime.fromisoformat(iso_str)
+            except Exception:
+                posted_at = None
+        if not posted_at and hit.get("created_at_i"):
+            try:
+                posted_at = datetime.fromtimestamp(hit["created_at_i"], tz=timezone.utc)
+            except Exception:
+                posted_at = None
+        if not posted_at:
+            posted_at = datetime.now(timezone.utc)
+
+        analysis_res = ml_engine.predict_sentiment(text, neutral_band=project.neutral_band)
+        priority_res = llm_service.classify_priority(text, sentiment=analysis_res["sentiment"])
+
+        c = Comment(
+            project_id=project.id,
+            source="hn",
+            text=text,
+            posted_at=posted_at
+        )
+        db.add(c)
+        db.flush()
+
+        a = Analysis(
+            comment_id=c.id,
+            sentiment=analysis_res["sentiment"],
+            confidence=analysis_res["confidence"],
+            polarity=analysis_res["polarity"],
+            priority=priority_res["priority"],
+            priority_reason=priority_res["priority_reason"],
+            priority_source=priority_res["priority_source"],
+            latency_ms=analysis_res["latency_ms"],
+            model_version=analysis_res["model_version"]
+        )
+        a.top_words = analysis_res["top_words"]
+        db.add(a)
+
+        t = Ticket(comment_id=c.id, status="New")
+        db.add(t)
+
+        saved_items.append({
+            "id": c.id,
+            "text": c.text,
+            "source": c.source,
+            "posted_at": c.posted_at.isoformat(),
+            "created_at": c.created_at.isoformat(),
+            "analysis": {
+                "sentiment": a.sentiment,
+                "confidence": a.confidence,
+                "polarity": a.polarity,
+                "priority": a.priority,
+                "priority_reason": a.priority_reason,
+                "priority_source": a.priority_source,
+                "top_words": a.top_words,
+                "latency_ms": a.latency_ms
+            }
+        })
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Successfully pulled and analyzed {len(saved_items)} comments from Hacker News",
+        "data": {
+            "ingested_count": len(saved_items),
+            "items": saved_items
+        }
+    }
+

@@ -2,9 +2,13 @@ import re
 import json
 import urllib.request
 import urllib.error
+import time
+import logging
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from .config import Config
+
+logger = logging.getLogger(__name__)
 
 class PriorityResult(BaseModel):
     priority: str = Field(..., pattern="^(High Priority|Medium Priority|Low Priority)$")
@@ -23,14 +27,69 @@ class LLMService:
     def __init__(self):
         self.api_key = Config.LLM_API_KEY
         self.provider = Config.LLM_PROVIDER
-        self.model = Config.LLM_MODEL
+        self.model = Config.LLM_MODEL or "gemini-3-flash-preview"
         self.timeout_sec = 8.0
 
+    def _is_groq(self) -> bool:
+        return self.provider.lower() == "groq" or (bool(self.api_key) and self.api_key.startswith("gsk_"))
+
+    def _get_candidate_models(self) -> List[str]:
+        if self._is_groq():
+            return ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+        candidates = [self.model, "gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest"]
+        seen = set()
+        deduped = []
+        for m in candidates:
+            if m and m not in seen and "1.5" not in m and "2.5" not in m:
+                seen.add(m)
+                deduped.append(m)
+        return deduped or ["gemini-3-flash-preview"]
+
+    def _call_raw_llm(self, prompt: str, max_tokens: int = 1000) -> Optional[str]:
+        """Calls Groq or Gemini REST endpoint with candidate model fallback."""
+        if not self.api_key:
+            return None
+
+        is_groq = self._is_groq()
+
+        for model_name in self._get_candidate_models():
+            try:
+                if is_groq:
+                    url = "https://api.groq.com/openai/v1/chat/completions"
+                    payload = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.2,
+                        "max_tokens": max_tokens,
+                        "response_format": {"type": "json_object"}
+                    }
+                    headers = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {self.api_key}"
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
+                    with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                        res_json = json.loads(response.read().decode("utf-8"))
+                        return res_json["choices"][0]["message"]["content"].strip()
+                else:
+                    # Google Gemini REST
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.2, "maxOutputTokens": max_tokens}
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                        res_json = json.loads(response.read().decode("utf-8"))
+                        return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+            except Exception as e:
+                logger.warning(f"[LLMService] Call to {model_name} failed: {e}")
+                continue
+
+        return None
+
     def classify_priority(self, text: str, sentiment: str = "Neutral") -> dict:
-        """
-        Classifies operational priority with Pydantic validation, 8s timeout,
-        1 retry, and deterministic rule-based fallback.
-        """
+        """Classifies operational priority with Pydantic validation, 8s timeout, and deterministic fallback."""
         if self.api_key:
             for attempt in range(2):
                 try:
@@ -42,7 +101,7 @@ class LLMService:
                             "priority_source": "llm"
                         }
                 except Exception as e:
-                    print(f"[LLMService] Priority API attempt {attempt+1} failed: {e}")
+                    logger.warning(f"[LLMService] Priority API attempt {attempt+1} failed: {e}")
 
         # Deterministic rule-based fallback
         return self._rule_based_priority(text, sentiment)
@@ -80,8 +139,6 @@ class LLMService:
         }
 
     def _call_llm_priority(self, text: str, sentiment: str) -> Optional[PriorityResult]:
-        # Google Gemini REST call
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         prompt = (
             "You are a customer feedback triage officer.\n"
             "Analyze the operational priority of the customer feedback enclosed between <comment> tags.\n"
@@ -93,20 +150,15 @@ class LLMService:
             "Respond ONLY with a JSON object in this format:\n"
             '{"priority": "High Priority"|"Medium Priority"|"Low Priority", "reason": "brief 1-sentence rationale"}'
         )
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 100}
-        }
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-        
-        with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
-            res_json = json.loads(response.read().decode("utf-8"))
-            raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-            # Clean markdown code blocks if present
+        raw_text = self._call_raw_llm(prompt, max_tokens=600)
+        if raw_text:
             raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+            json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+            if json_match:
+                raw_text = json_match.group(0)
             parsed = json.loads(raw_text)
             return PriorityResult(**parsed)
+        return None
 
     def generate_briefing(self, stats: dict, top_comments: List[str]) -> dict:
         """Generates an executive briefing over aggregate project metrics."""
@@ -122,22 +174,17 @@ class LLMService:
             '{"headline": "one powerful summary sentence", "top_issues": ["issue 1", "issue 2", "issue 3"], '
             '"suggested_actions": ["action 1", "action 2", "action 3"]}'
         )
-        if self.api_key:
+        raw_text = self._call_raw_llm(prompt, max_tokens=800)
+        if raw_text:
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-                payload = {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.2, "maxOutputTokens": 300}
-                }
-                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
-                with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
-                    res_json = json.loads(response.read().decode("utf-8"))
-                    raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
-                    parsed = json.loads(raw_text)
-                    return BriefingResult(**parsed).model_dump()
+                raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+                json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+                if json_match:
+                    raw_text = json_match.group(0)
+                parsed = json.loads(raw_text)
+                return BriefingResult(**parsed).model_dump()
             except Exception as e:
-                print(f"[LLMService] Briefing generation failed: {e}")
+                logger.warning(f"[LLMService] Briefing parse failed: {e}")
 
         # Deterministic fallback briefing
         neg_pct = stats.get("negative_pct", 0)
@@ -161,11 +208,7 @@ class LLMService:
         }
 
     def generate_reply_draft(self, comment_text: str, sentiment: str, tone: str = "warm") -> dict:
-        """Drafts a customer support reply with Pydantic validation, 8s timeout, one retry, and clear unavailable state (no fake text)."""
-        import time
-        import logging
-        logger = logging.getLogger(__name__)
-
+        """Drafts a customer support reply with Pydantic validation, 8s timeout, candidate model fallback, and clear unavailable state (no fake text)."""
         start_time = time.perf_counter()
 
         prompt = (
@@ -182,33 +225,25 @@ class LLMService:
 
         if self.api_key:
             for attempt in range(2):
-                try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
-                    payload = {
-                        "contents": [{"parts": [{"text": prompt}]}],
-                        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 200}
-                    }
-                    req = urllib.request.Request(
-                        url,
-                        data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json"}
-                    )
-                    with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
-                        res_json = json.loads(response.read().decode("utf-8"))
-                        raw_text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                raw_text = self._call_raw_llm(prompt, max_tokens=1000)
+                if raw_text:
+                    try:
                         raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE)
+                        json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+                        if json_match:
+                            raw_text = json_match.group(0)
                         parsed = json.loads(raw_text)
                         validated = ReplyDraftResult(**parsed)
                         latency_ms = (time.perf_counter() - start_time) * 1000
-                        logger.info(f"[LLMService] Reply draft generated in {latency_ms:.1f}ms (attempt {attempt+1})")
+                        logger.info(f"[LLMService] Reply draft generated in {latency_ms:.1f}ms")
                         return {
                             "status": "success",
                             "draft": validated.draft,
                             "tone": validated.tone,
                             "latency_ms": round(latency_ms, 2)
                         }
-                except Exception as e:
-                    logger.warning(f"[LLMService] Reply draft attempt {attempt+1} failed: {e}")
+                    except Exception as e:
+                        logger.warning(f"[LLMService] Reply draft parse attempt {attempt+1} failed: {e}")
 
         # If LLM generation failed or no API key, return a clear unavailable state (NO FAKE TEXT)
         latency_ms = (time.perf_counter() - start_time) * 1000

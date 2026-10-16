@@ -46,7 +46,7 @@ class Config:
     # LLM Settings
     LLM_API_KEY = os.getenv("LLM_API_KEY", "")
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
-    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+    LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
     
     # Models Paths
     MODEL_PATH = BASE_DIR / "trained_model.sav"

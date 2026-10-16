@@ -155,9 +155,9 @@ def get_shared_report(token: str, db: Session = Depends(get_db)):
             "representative_comments": []  # comment text hidden by default
         })
 
-    # Briefing
+    # Briefing (Privacy: sanitize against verbatim user text fragments)
     neg_comments = [c for c in comments if c.analysis and c.analysis.sentiment == "Negative"]
-    sample = [c.text for c in (neg_comments[:8] + comments[:4])]
+    sample = [c.text[:80] for c in (neg_comments[:6] + comments[:3])]
     neg_count = len(neg_comments)
     neg_pct = round((neg_count / total_comments) * 100, 1) if total_comments > 0 else 0.0
 
@@ -166,6 +166,31 @@ def get_shared_report(token: str, db: Session = Depends(get_db)):
         top_comments=sample
     )
     briefing_data.pop("sampled_comment_ids", None)
+
+    # Verbatim fragment sanitizer
+    raw_long_fragments = [c.text.strip() for c in comments if len(c.text.strip()) >= 15]
+
+    def strip_verbatim_fragments(val: str) -> str:
+        if not val:
+            return ""
+        cleaned = val
+        for raw in raw_long_fragments:
+            if raw in cleaned:
+                cleaned = cleaned.replace(raw, "recurring user friction")
+        return cleaned
+
+    if isinstance(briefing_data, dict):
+        if "headline" in briefing_data:
+            briefing_data["headline"] = strip_verbatim_fragments(str(briefing_data["headline"]))
+        if "top_issues" in briefing_data and isinstance(briefing_data["top_issues"], list):
+            briefing_data["top_issues"] = [strip_verbatim_fragments(str(x)) for x in briefing_data["top_issues"]]
+        if "suggested_actions" in briefing_data and isinstance(briefing_data["suggested_actions"], list):
+            briefing_data["suggested_actions"] = [strip_verbatim_fragments(str(x)) for x in briefing_data["suggested_actions"]]
+
+    # Sanitize keywords: ensure concise terms only (no verbatim comment sentences)
+    stats_data["top_keywords"] = [
+        kw for kw in top_keywords if len(kw.get("word", "")) <= 25 and "\n" not in kw.get("word", "")
+    ]
 
     return {
         "status": "success",

@@ -89,10 +89,6 @@ export const Inbox: React.FC = () => {
 
   const handleGenerateDraft = async () => {
     if (!selectedComment) return;
-    if (project?.is_demo) {
-      alert("Sample data, read-only. Create your own project to edit.");
-      return;
-    }
     setDrafting(true);
     setDraftError(null);
     try {
@@ -107,7 +103,7 @@ export const Inbox: React.FC = () => {
 
   const handleApproveDraft = async () => {
     if (!activeDraft) return;
-    if (project?.is_demo) {
+    if (project?.is_demo || activeDraft.id === 0) {
       alert("Sample data, read-only. Create your own project to edit.");
       return;
     }
@@ -127,13 +123,16 @@ export const Inbox: React.FC = () => {
     navigator.clipboard.writeText(activeDraft.body);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    try {
-      await api.updateReplyDraft(activeDraft.id, {
-        body: activeDraft.body,
-        status: "copied"
-      });
-    } catch (err) {
-      console.error(err);
+
+    if (!project?.is_demo && activeDraft.id !== 0) {
+      try {
+        await api.updateReplyDraft(activeDraft.id, {
+          body: activeDraft.body,
+          status: "copied"
+        });
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 

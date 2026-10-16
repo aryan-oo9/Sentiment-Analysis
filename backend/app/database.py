@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import Config
 
 engine = create_engine(
@@ -8,10 +8,10 @@ engine = create_engine(
     echo=False,
     pool_pre_ping=True,
     # SQLite does not support pool_size
-    **({"connect_args": {"check_same_thread": False}} if Config.DATABASE_URL.startswith("sqlite") else {})
+    **({"connect_args": {"check_same_thread": False}} if Config.DATABASE_URL.startswith("sqlite") else {"pool_size": 10, "max_overflow": 20})
 )
 
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():

@@ -99,7 +99,7 @@ def ingest_pasted_comments(
     }
 
 @comment_router.post("/projects/{project_id}/import", status_code=201)
-async def import_csv_comments(
+def import_csv_comments(
     project_id: int,
     file: UploadFile = File(...),
     text_column: Optional[str] = Form(None),
@@ -124,7 +124,7 @@ async def import_csv_comments(
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files are supported")
 
-    content = await file.read()
+    content = file.file.read()
     try:
         df = pd.read_csv(io.BytesIO(content))
     except Exception as e:

@@ -88,7 +88,7 @@ export const Landing: React.FC = () => {
     <div className="max-w-6xl mx-auto px-6 py-12 md:py-20 space-y-28">
       {/* 1. Hero Section (Type-only statement with sentence controls) */}
       <section className="space-y-8">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-[var(--muted)]">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-sans text-[var(--muted)]">
           <span>Active Classification Knobs:</span>
           <button
             onClick={cycleNeutralBand}
@@ -174,7 +174,7 @@ export const Landing: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Exchange 1 */}
           <div className="space-y-4">
-            <span className="text-xs font-mono text-[var(--muted)] block">01 / Ingestion</span>
+            <span className="text-xs font-semibold text-[var(--muted)] block">01 / Ingestion</span>
             <h3 className="text-xl font-bold">First, paste your comments.</h3>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
               Batch import thousands of feedback rows from CSV, social threads, or paste inputs without schema restrictions.
@@ -182,7 +182,7 @@ export const Landing: React.FC = () => {
 
             <div
               data-ui="themes-fragment"
-              className="border-2 border-[var(--ink)] bg-[var(--surface)] p-4 space-y-3 font-mono text-xs"
+              className="border-2 border-[var(--ink)] bg-[var(--surface)] p-4 space-y-3 text-xs"
             >
               <div className="flex justify-between items-center text-[10px] text-[var(--muted)] border-b border-[var(--border)] pb-2 font-sans font-bold uppercase">
                 <span>Detected Clusters</span>
@@ -191,15 +191,15 @@ export const Landing: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center bg-[var(--bg)] p-2 border border-[var(--border)]">
                   <span className="font-bold">Checkout &amp; Billing</span>
-                  <span className="bg-[var(--field-coral)] text-white px-1.5 py-0.5 text-[10px]">68% Neg</span>
+                  <span className="bg-[var(--field-coral)] text-white px-1.5 py-0.5 text-[10px] font-mono">68% Neg</span>
                 </div>
                 <div className="flex justify-between items-center bg-[var(--bg)] p-2 border border-[var(--border)]">
                   <span className="font-bold">Shipping Latency</span>
-                  <span className="bg-[var(--field-yellow)] text-[var(--ink)] px-1.5 py-0.5 text-[10px]">42% Neu</span>
+                  <span className="bg-[var(--field-yellow)] text-[var(--ink)] px-1.5 py-0.5 text-[10px] font-mono">42% Neu</span>
                 </div>
                 <div className="flex justify-between items-center bg-[var(--bg)] p-2 border border-[var(--border)]">
                   <span className="font-bold">Mobile UI Navigation</span>
-                  <span className="bg-[var(--field-green)] text-[var(--ink)] px-1.5 py-0.5 text-[10px]">84% Pos</span>
+                  <span className="bg-[var(--field-green)] text-[var(--ink)] px-1.5 py-0.5 text-[10px] font-mono">84% Pos</span>
                 </div>
               </div>
             </div>
@@ -207,7 +207,7 @@ export const Landing: React.FC = () => {
 
           {/* Exchange 2 */}
           <div className="space-y-4">
-            <span className="text-xs font-mono text-[var(--muted)] block">02 / Synthesis</span>
+            <span className="text-xs font-semibold text-[var(--muted)] block">02 / Synthesis</span>
             <h3 className="text-xl font-bold">Then ask what&apos;s going wrong.</h3>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
               Automated briefing synthesis highlights anomalies, outage spikes, and velocity shifts before they reach executive tickets.
@@ -217,14 +217,14 @@ export const Landing: React.FC = () => {
               data-ui="briefing-fragment"
               className="border-2 border-[var(--ink)] bg-[var(--surface)] p-4 space-y-2 text-xs"
             >
-              <div className="flex justify-between items-center text-[10px] text-[var(--muted)] border-b border-[var(--border)] pb-2 font-mono font-bold uppercase">
+              <div className="flex justify-between items-center text-[10px] text-[var(--muted)] border-b border-[var(--border)] pb-2 font-sans font-bold uppercase">
                 <span>Automated Briefing</span>
                 <span>02:00 - 06:00 UTC</span>
               </div>
               <p className="text-xs leading-relaxed text-[var(--ink)] font-serif italic pt-1">
                 &ldquo;Spike detected in payment gateway recovery. 142 comments flagged negative, with 21 high-priority transactions stalled at card authorization.&rdquo;
               </p>
-              <div className="pt-2 flex items-center justify-between font-mono text-[10px] text-[var(--muted)] border-t border-[var(--border)]">
+              <div className="pt-2 flex items-center justify-between font-sans text-[10px] text-[var(--muted)] border-t border-[var(--border)]">
                 <span>Priority: High (21)</span>
                 <span>Confidence: 94.2%</span>
               </div>
@@ -233,7 +233,7 @@ export const Landing: React.FC = () => {
 
           {/* Exchange 3 */}
           <div className="space-y-4">
-            <span className="text-xs font-mono text-[var(--muted)] block">03 / Resolution</span>
+            <span className="text-xs font-semibold text-[var(--muted)] block">03 / Resolution</span>
             <h3 className="text-xl font-bold">Finally, answer the people who matter.</h3>
             <p className="text-sm text-[var(--muted)] leading-relaxed">
               Every drafted reply is staged for explicit human approval. Nothing is auto-sent or hallucinated without oversight.
@@ -243,7 +243,7 @@ export const Landing: React.FC = () => {
               data-ui="reply-fragment"
               className="border-2 border-[var(--ink)] bg-[var(--surface)] p-4 space-y-3 text-xs"
             >
-              <div className="flex justify-between items-center border-b border-[var(--border)] pb-2 font-mono text-[10px]">
+              <div className="flex justify-between items-center border-b border-[var(--border)] pb-2 font-sans text-[10px]">
                 <span className="font-bold text-[var(--ink)] uppercase">Reply Draft</span>
                 <span className="bg-[var(--ink)] text-[var(--bg)] px-1.5 py-0.5 text-[9px] uppercase">
                   Awaiting Approval
@@ -252,7 +252,7 @@ export const Landing: React.FC = () => {
               <p className="text-xs text-[var(--ink)] leading-relaxed bg-[var(--bg)] p-2 border border-[var(--border)]">
                 &ldquo;We identified a temporary gateway drop during checkout. Your card was not charged twice and your order is confirmed.&rdquo;
               </p>
-              <div className="flex justify-end gap-2 pt-1 font-mono text-[10px]">
+              <div className="flex justify-end gap-2 pt-1 font-sans text-[10px]">
                 <span className="border border-[var(--ink)] px-2 py-1 text-[var(--ink)] font-bold">
                   Approve &amp; Copy
                 </span>

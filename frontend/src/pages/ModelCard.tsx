@@ -17,8 +17,8 @@ export const ModelCard: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-6 py-16 space-y-12">
       <div>
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)] block">
-          Model Governance & Empirical Audit
+        <span className="text-xs font-semibold uppercase text-[var(--muted)] block">
+          Model Governance &amp; Empirical Audit
         </span>
         <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight mt-1">
           Model Card: TweetSense v{evalData.version}
@@ -40,13 +40,13 @@ export const ModelCard: React.FC = () => {
       <section className="space-y-4">
         <div className="flex items-baseline justify-between border-b-2 border-[var(--ink)] pb-2">
           <h2 className="text-xl font-black uppercase tracking-tight">Empirical Benchmark (20,000-Row Sample)</h2>
-          <span className="text-xs font-mono text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)]">
             N = {evalData.sample_size.toLocaleString()} sample rows
           </span>
         </div>
 
         <div className="p-3.5 border-2 border-[var(--field-yellow)] bg-[var(--surface)] text-xs text-[var(--ink)] space-y-1">
-          <strong className="block font-bold uppercase tracking-wider text-[11px] text-[var(--field-yellow)]">
+          <strong className="block font-bold text-[11px] text-[var(--field-yellow)] uppercase">
             Data Split Honesty Disclosure
           </strong>
           <p className="leading-relaxed">
@@ -54,7 +54,7 @@ export const ModelCard: React.FC = () => {
           </p>
         </div>
 
-        <div className="border-b-2 border-[var(--ink)] divide-y divide-[var(--border)] font-mono text-xs">
+        <div className="border-b-2 border-[var(--ink)] divide-y divide-[var(--border)] text-xs">
           <div className="flex justify-between px-3 py-3">
             <span className="font-sans font-bold uppercase text-[var(--muted)]">Model Architecture</span>
             <span className="font-bold">{evalData.model_architecture}</span>
@@ -96,7 +96,7 @@ export const ModelCard: React.FC = () => {
       <section className="space-y-4">
         <div className="flex items-baseline justify-between border-b-2 border-[var(--ink)] pb-2">
           <h2 className="text-xl font-black uppercase tracking-tight">Measured Operational Latency</h2>
-          <span className="text-xs font-mono text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)]">
             Tested on {latency.sampled_requests} warm calls
           </span>
         </div>
@@ -172,7 +172,7 @@ export const ModelCard: React.FC = () => {
       <section className="space-y-4">
         <div className="flex items-baseline justify-between border-b-2 border-[var(--ink)] pb-2">
           <h2 className="text-xl font-black uppercase tracking-tight">Database Query Optimization &amp; N+1 Reconciliation</h2>
-          <span className="text-xs font-mono text-[var(--muted)]">
+          <span className="text-xs text-[var(--muted)]">
             Empirical Benchmark
           </span>
         </div>
@@ -211,7 +211,7 @@ export const ModelCard: React.FC = () => {
       {/* Binary Classification Confusion Matrix */}
       <section className="space-y-4">
         <h2 className="text-xl font-black uppercase tracking-tight">Confusion Matrix (Sentiment140 Binary Split)</h2>
-        <div className="max-w-md border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4 font-mono text-xs">
+        <div className="max-w-md border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4 text-xs">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-2 font-bold uppercase text-[10px] text-[var(--muted)]">Actual \ Pred</div>
             <div className="p-2 font-bold uppercase text-[10px]">Pred Negative</div>
@@ -238,14 +238,14 @@ export const ModelCard: React.FC = () => {
             </div>
           </div>
           <div className="text-[10px] text-[var(--muted)] text-center">
-            Evaluated on {evalData.sample_size.toLocaleString()} held-out tweets from Sentiment140 (Seed: {evalData.evaluation_seed}).
+            Evaluated on {evalData.sample_size.toLocaleString()} sample tweets from Sentiment140 (Seed: {evalData.evaluation_seed}).
           </div>
         </div>
       </section>
 
       {/* Honest Boundary & Failure Modes */}
       <section className="space-y-4">
-        <h2 className="text-xl font-black uppercase tracking-tight">Known Failure Modes & Boundaries</h2>
+        <h2 className="text-xl font-black uppercase tracking-tight">Known Failure Modes &amp; Boundaries</h2>
         <div className="space-y-4 text-sm leading-relaxed text-[var(--muted)]">
           {evalData.known_limitations.map((limit, idx) => (
             <div key={limit.id} className="border-l-4 border-[var(--field-coral)] pl-4 py-1">
@@ -268,7 +268,7 @@ export const ModelCard: React.FC = () => {
       <div className="pt-6">
         <Link
           to="/"
-          className="bg-[var(--ink)] text-[var(--bg)] px-6 py-3 font-bold text-xs uppercase tracking-wider hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors inline-block"
+          className="bg-[var(--ink)] text-[var(--bg)] px-6 py-3 font-bold text-xs uppercase hover:bg-[var(--accent)] hover:text-[var(--accent-ink)] transition-colors inline-block"
         >
           &larr; Back to Live Demo
         </Link>

@@ -25,9 +25,11 @@ export const ProjectDashboard: React.FC = () => {
   const [hnLimit, setHnLimit] = useState(20);
   const [ingesting, setIngesting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [projData, statsData, themesData] = await Promise.all([
         api.getProject(id),
@@ -42,8 +44,9 @@ export const ProjectDashboard: React.FC = () => {
       if (statsData.total_comments > 0) {
         api.getExecutiveBriefing(id).then(setBriefing).catch(console.error);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Dashboard load failed:", err);
+      setError(err.message || "Failed to load dashboard data. The server may be waking up.");
     } finally {
       setLoading(false);
     }
@@ -104,6 +107,22 @@ export const ProjectDashboard: React.FC = () => {
     }
   };
 
+
+  // Error State with Retry
+  if (error && (!project || !stats)) {
+    return (
+      <div className="p-8 max-w-xl mx-auto my-16 border-2 border-[var(--field-coral)] bg-[var(--surface)] text-center space-y-4">
+        <h2 className="text-xl font-bold text-[var(--ink)]">Connection Interrupted</h2>
+        <p className="text-xs text-[var(--muted)]">{error}</p>
+        <button
+          onClick={loadData}
+          className="bg-[var(--ink)] text-[var(--bg)] px-5 py-2 font-bold text-xs hover:bg-[var(--field-coral)] hover:text-white transition-colors cursor-pointer"
+        >
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
 
   // Skeleton Loader (Surface-toned to prevent layout shifts)
   if (loading || !project || !stats) {

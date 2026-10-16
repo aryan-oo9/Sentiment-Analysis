@@ -18,6 +18,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Landing },
       { path: "login", Component: Login },
       { path: "model", Component: ModelCard },
+      { path: "model-card", Component: ModelCard },
       { path: "r/:token", Component: SharedReport },
     ],
   },

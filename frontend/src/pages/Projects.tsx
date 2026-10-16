@@ -86,14 +86,25 @@ export const Projects: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-[var(--field-coral)] text-white text-xs font-semibold">
-          {error}
+        <div className="p-4 bg-[var(--field-coral)] text-white text-xs font-semibold flex justify-between items-center">
+          <span>{error}</span>
+          <button
+            onClick={fetchProjects}
+            className="px-3 py-1 bg-white text-[var(--ink)] font-bold hover:bg-[var(--bg)] cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-xs font-semibold text-[var(--muted)]">
-          Loading workspaces...
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 bg-[var(--surface)] border border-[var(--border)] p-4 flex flex-col justify-center space-y-2">
+              <div className="h-4 bg-[var(--border)] w-48"></div>
+              <div className="h-3 bg-[var(--border)] w-72"></div>
+            </div>
+          ))}
         </div>
       ) : projects.length === 0 ? (
         <div className="border-2 border-dashed border-[var(--border)] p-12 text-center space-y-4">

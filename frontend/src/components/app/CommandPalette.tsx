@@ -120,7 +120,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <FolderKanban size={14} />
               <span>All Workspaces</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/app</span>
+            <span className="text-[10px] font-medium opacity-60">/app</span>
           </Command.Item>
 
           <Command.Item
@@ -131,7 +131,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <LayoutDashboard size={14} />
               <span>Workspace Dashboard</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/app/p/{currentProjectId}</span>
+            <span className="text-[10px] font-sans opacity-60">/app/p/{currentProjectId}</span>
           </Command.Item>
 
           <Command.Item
@@ -142,7 +142,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Inbox size={14} />
               <span>Triage Inbox</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/inbox</span>
+            <span className="text-[10px] font-sans opacity-60">/inbox</span>
           </Command.Item>
 
           <Command.Item
@@ -153,7 +153,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Settings size={14} />
               <span>Project Settings & Share Token</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/settings</span>
+            <span className="text-[10px] font-sans opacity-60">/settings</span>
           </Command.Item>
 
           <Command.Item
@@ -164,7 +164,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Award size={14} />
               <span>Model Card & Methodology</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/model-card</span>
+            <span className="text-[10px] font-sans opacity-60">/model-card</span>
           </Command.Item>
 
           <Command.Item
@@ -175,7 +175,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Home size={14} />
               <span>Home / Landing Page</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">/</span>
+            <span className="text-[10px] font-sans opacity-60">/</span>
           </Command.Item>
         </Command.Group>
 
@@ -192,7 +192,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Plus size={14} />
               <span>Ingest Feedback (Paste Text / CSV)</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">Ingest</span>
+            <span className="text-[10px] font-sans opacity-60">Ingest</span>
           </Command.Item>
 
           <Command.Item
@@ -203,7 +203,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Globe size={14} />
               <span>Pull from Hacker News</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">Algolia HN</span>
+            <span className="text-[10px] font-sans opacity-60">Algolia HN</span>
           </Command.Item>
 
           <Command.Item
@@ -214,7 +214,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <FileSpreadsheet size={14} />
               <span>Export Workspace Comments (CSV)</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">Sanitized CSV</span>
+            <span className="text-[10px] font-sans opacity-60">Sanitized CSV</span>
           </Command.Item>
         </Command.Group>
 
@@ -231,7 +231,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Filter size={14} />
               <span>Filter: Negative Sentiment Only</span>
             </div>
-            <span className="text-[10px] font-mono text-[var(--field-coral)]">Negative</span>
+            <span className="text-[10px] font-sans text-[var(--field-coral)]">Negative</span>
           </Command.Item>
 
           <Command.Item
@@ -242,7 +242,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Filter size={14} />
               <span>Filter: High Priority Only</span>
             </div>
-            <span className="text-[10px] font-mono text-[var(--field-yellow)]">High Priority</span>
+            <span className="text-[10px] font-sans text-[var(--field-yellow)]">High Priority</span>
           </Command.Item>
 
           <Command.Item
@@ -253,7 +253,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <Filter size={14} />
               <span>Filter: Clear All Filters</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">Reset</span>
+            <span className="text-[10px] font-sans opacity-60">Reset</span>
           </Command.Item>
         </Command.Group>
 
@@ -270,7 +270,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               {isNight ? <Sun size={14} /> : <Moon size={14} />}
               <span>Toggle Night Theme ({isNight ? "Switch to Day" : "Switch to Night"})</span>
             </div>
-            <span className="text-[10px] font-mono opacity-60">{isNight ? "Night Active" : "Day Active"}</span>
+            <span className="text-[10px] font-sans opacity-60">{isNight ? "Night Active" : "Day Active"}</span>
           </Command.Item>
         </Command.Group>
       </Command.List>

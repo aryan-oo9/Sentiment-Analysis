@@ -65,7 +65,7 @@ export const SharedReport: React.FC = () => {
           <span className="bg-[var(--ink)] text-[var(--bg)] text-[10px] font-bold px-2 py-0.5 uppercase">
             Public Executive View
           </span>
-          <span className="text-xs text-[var(--muted)] font-mono">
+          <span className="text-xs text-[var(--muted)] font-sans font-medium">
             Generated {new Date(report.created_at).toLocaleDateString()}
           </span>
         </div>

@@ -27,9 +27,11 @@ export const Inbox: React.FC = () => {
   const [drafting, setDrafting] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchComments = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getComments(id, {
         page,
@@ -41,8 +43,9 @@ export const Inbox: React.FC = () => {
       setComments(data.comments);
       setTotalItems(data.pagination.total_items);
       setTotalPages(data.pagination.total_pages);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch comments:", err);
+      setError(err.message || "Failed to load feedback comments.");
     } finally {
       setLoading(false);
     }
@@ -260,10 +263,24 @@ export const Inbox: React.FC = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 bg-[var(--field-coral)] text-white text-xs font-semibold flex justify-between items-center">
+          <span>{error}</span>
+          <button
+            onClick={fetchComments}
+            className="px-3 py-1 bg-white text-[var(--ink)] font-bold hover:bg-[var(--bg)] cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Dense Comments Table */}
       {loading ? (
-        <div className="py-16 text-center text-xs font-semibold text-[var(--muted)]">
-          Loading feedback rows...
+        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-4 space-y-3 animate-pulse">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-12 bg-[var(--bg)] border border-[var(--border)]"></div>
+          ))}
         </div>
       ) : comments.length === 0 ? (
         <div className="border border-dashed border-[var(--border)] p-12 text-center text-sm font-semibold text-[var(--muted)]">

@@ -3,6 +3,22 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Auto-load .env from TweetSense root or backend dir if present
+for env_path in [BASE_DIR / ".env", BASE_DIR.parent / ".env"]:
+    if env_path.is_file():
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
 class Config:
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     FLASK_ENV = os.getenv("FLASK_ENV", "production")

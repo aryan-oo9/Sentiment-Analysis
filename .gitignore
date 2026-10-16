@@ -61,7 +61,8 @@ out/
 Thumbs.db
 
 # Local documentation, audit dossiers & booklets (preserved locally, ignored from git)
-docs/
+docs/*
+!docs/FINAL_GATE.md
 screenshots/
 *.docx
 *.pdf
@@ -77,7 +78,8 @@ backend/analysis_backend.py
 backend/app2.py
 backend/proj.ipynb
 backend/smoke_test.py
-backend/tests/
+backend/tests/*
+!backend/tests/test_wave4.py
 frontend/README.md
 frontend/src/App.css
 frontend/src/App.tsx

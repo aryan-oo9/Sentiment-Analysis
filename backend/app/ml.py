@@ -100,7 +100,7 @@ class MLEngine:
                 width=480,
                 height=240,
                 background_color="#dcd5c5",
-                colormap="dark2",
+                colormap="Dark2",
                 stopwords=None,
                 max_words=60
             ).generate(text)

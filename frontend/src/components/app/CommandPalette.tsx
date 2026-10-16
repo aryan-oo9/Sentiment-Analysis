@@ -88,8 +88,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       open={isOpen}
       onOpenChange={setIsOpen}
       label="Command Palette"
-      overlayClassName="fixed inset-0 bg-black/70 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4"
-      contentClassName="max-w-xl w-full bg-[var(--bg)] border-2 border-[var(--ink)] text-[var(--ink)] rounded-none shadow-none outline-none overflow-hidden"
+      overlayClassName="fixed inset-0 bg-black/70 z-50 transition-opacity"
+      contentClassName="fixed top-20 left-1/2 -translate-x-1/2 max-w-xl w-[92vw] sm:w-full z-50 bg-[var(--bg)] border-2 border-[var(--ink)] text-[var(--ink)] rounded-none shadow-2xl outline-none overflow-hidden"
     >
       <div className="flex items-center border-b-2 border-[var(--ink)] px-4 bg-[var(--surface)]">
         <Search size={16} className="text-[var(--muted)] mr-3 shrink-0" />

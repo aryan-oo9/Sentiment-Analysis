@@ -1,9 +1,12 @@
 {
   "version": "2.0.0",
-  "evaluated_at": "2026-10-16T10:28:37Z",
-  "git_commit": "13d864c",
+  "evaluated_at": "2026-10-16T13:12:12Z",
+  "git_commit": "1e7b0dd",
   "evaluation_seed": 42,
   "sample_size": 20000,
+  "split_type": "empirical_corpus_sample",
+  "held_out_verified": false,
+  "split_honesty_note": "The 20,000-row sample may overlap training data and must not be called a held-out test split. The original training notebook (proj.ipynb) trained on the Sentiment140 corpus without preserving a fixed test index set.",
   "classes_evaluated": [
     "Negative (0)",
     "Positive (4)"
@@ -38,15 +41,15 @@
   },
   "latency": {
     "endpoint": "https://sentiment-analysis-tm33.onrender.com/api/demo/analyze",
-    "sampled_requests": 20,
-    "p50_ms": 1339.1,
-    "p95_ms": 3106.5,
-    "mean_ms": 1721.6,
-    "min_ms": 525.0,
-    "max_ms": 6340.7,
+    "sampled_requests": 13,
+    "p50_ms": 905.1,
+    "p95_ms": 1092.1,
+    "mean_ms": 881.9,
+    "min_ms": 344.7,
+    "max_ms": 2667.8,
     "status": "measured_live",
-    "inference_p50_ms": 0.41,
-    "inference_p95_ms": 0.65
+    "inference_p50_ms": 0.39,
+    "inference_p95_ms": 0.53
   },
   "neutral_handling": {
     "method": "TextBlob Polarity Threshold Band (\u00b10.10)",

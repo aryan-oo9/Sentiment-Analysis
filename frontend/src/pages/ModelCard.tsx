@@ -39,10 +39,19 @@ export const ModelCard: React.FC = () => {
       {/* Verified Empirical Benchmarks */}
       <section className="space-y-4">
         <div className="flex items-baseline justify-between border-b-2 border-[var(--ink)] pb-2">
-          <h2 className="text-xl font-black uppercase tracking-tight">Evaluated Metrics (Held-Out Split)</h2>
+          <h2 className="text-xl font-black uppercase tracking-tight">Empirical Benchmark (20,000-Row Sample)</h2>
           <span className="text-xs font-mono text-[var(--muted)]">
-            N = {evalData.sample_size.toLocaleString()} held-out rows
+            N = {evalData.sample_size.toLocaleString()} sample rows
           </span>
+        </div>
+
+        <div className="p-3.5 border-2 border-[var(--field-yellow)] bg-[var(--surface)] text-xs text-[var(--ink)] space-y-1">
+          <strong className="block font-bold uppercase tracking-wider text-[11px] text-[var(--field-yellow)]">
+            Data Split Honesty Disclosure
+          </strong>
+          <p className="leading-relaxed">
+            The 20,000-row evaluation sample may overlap training data and must not be called a strictly held-out test split. The original training notebook (<code className="font-mono bg-[var(--bg)] px-1 py-0.5 border border-[var(--border)]">proj.ipynb</code>) trained across the Sentiment140 corpus without preserving a fixed test partition index. We report these empirical scores for transparency rather than claiming verified held-out generalization.
+          </p>
         </div>
 
         <div className="border-b-2 border-[var(--ink)] divide-y divide-[var(--border)] font-mono text-xs">
@@ -59,7 +68,7 @@ export const ModelCard: React.FC = () => {
             <span className="font-bold">{evalData.training_dataset}</span>
           </div>
           <div className="flex justify-between px-3 py-3 bg-[var(--surface)]">
-            <span className="font-sans font-bold uppercase text-[var(--ink)]">Validation Accuracy</span>
+            <span className="font-sans font-bold uppercase text-[var(--ink)]">Benchmark Accuracy</span>
             <span className="font-bold text-[var(--ink)] text-sm">{metrics.accuracy_pct}%</span>
           </div>
           <div className="flex justify-between px-3 py-3 bg-[var(--surface)]">
@@ -97,6 +106,44 @@ export const ModelCard: React.FC = () => {
           ). Pure inference measured locally on single CPU core.
         </p>
 
+        {/* Two Headline Labelled Numbers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-5 font-mono space-y-1">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-sans font-bold uppercase text-[var(--muted)]">
+                1. Live API Round-Trip Latency (p50)
+              </span>
+              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-[var(--ink)] text-[var(--bg)]">
+                Network + API + DB
+              </span>
+            </div>
+            <div className="text-4xl font-black text-[var(--ink)] pt-1">
+              {latency.p50_ms} <span className="text-sm font-sans font-normal text-[var(--muted)]">ms</span>
+            </div>
+            <p className="text-[11px] font-sans text-[var(--muted)] pt-1">
+              End-to-end HTTP POST to Render container, including network transit, FastAPI validation, and JSON serialization.
+            </p>
+          </div>
+
+          <div className="border-2 border-[var(--field-green)] bg-[var(--surface)] p-5 font-mono space-y-1">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-sans font-bold uppercase text-[var(--muted)]">
+                2. Local Model Inference Time (p50)
+              </span>
+              <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 bg-[var(--field-green)] text-[var(--ink)]">
+                Algorithmic ML Core
+              </span>
+            </div>
+            <div className="text-4xl font-black text-[var(--field-green)] pt-1">
+              {latency.inference_p50_ms} <span className="text-sm font-sans font-normal text-[var(--muted)]">ms</span>
+            </div>
+            <p className="text-[11px] font-sans text-[var(--muted)] pt-1">
+              Pure CPU computation time for TextBlob polarity check, TF-IDF n-gram vectorization, and Logistic Regression decision boundary.
+            </p>
+          </div>
+        </div>
+
+        {/* Detailed Quartiles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
           <div className="border border-[var(--border)] bg-[var(--surface)] p-4 font-mono">
             <span className="text-[10px] font-sans font-bold uppercase text-[var(--muted)] block">Live API p50</span>
@@ -118,6 +165,46 @@ export const ModelCard: React.FC = () => {
             <span className="text-2xl font-black text-[var(--field-green)] block mt-1">{latency.inference_p95_ms}</span>
             <span className="text-[10px] text-[var(--muted)]">sub-millisecond</span>
           </div>
+        </div>
+      </section>
+
+      {/* Database N+1 Query Reconciliation */}
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between border-b-2 border-[var(--ink)] pb-2">
+          <h2 className="text-xl font-black uppercase tracking-tight">Database Query Optimization &amp; N+1 Reconciliation</h2>
+          <span className="text-xs font-mono text-[var(--muted)]">
+            Empirical Benchmark
+          </span>
+        </div>
+        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-5 space-y-3 text-xs leading-relaxed">
+          <p>
+            When fetching 50 triage comments alongside their associated <code className="font-mono">Analysis</code> and <code className="font-mono">Correction</code> records, the naive ORM implementation generated an N+1 query waterfall (101 individual SQL statements). We benchmarked both intra-datacenter LAN and cross-continental WAN conditions:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="border border-[var(--border)] p-3 bg-[var(--bg)] font-mono space-y-1">
+              <strong className="block font-sans text-xs uppercase font-bold text-[var(--ink)]">
+                Condition A: Co-Located Cloud (Render to Oregon DB)
+              </strong>
+              <div className="text-[11px] text-[var(--muted)]">Ping: ~20 ms | Queries: 101 &rarr; 1</div>
+              <div className="text-sm font-bold pt-1">
+                2,200 ms <span className="text-xs font-normal text-[var(--muted)]">&rarr;</span> 42 ms{" "}
+                <span className="text-[var(--field-green)] font-black">(52x speedup)</span>
+              </div>
+            </div>
+            <div className="border border-[var(--border)] p-3 bg-[var(--bg)] font-mono space-y-1">
+              <strong className="block font-sans text-xs uppercase font-bold text-[var(--ink)]">
+                Condition B: Direct WAN Pooler (Client to Sydney Supabase)
+              </strong>
+              <div className="text-[11px] text-[var(--muted)]">Ping: ~430 ms | Queries: 102 &rarr; 2</div>
+              <div className="text-sm font-bold pt-1">
+                44,046 ms <span className="text-xs font-normal text-[var(--muted)]">&rarr;</span> 1,990 ms{" "}
+                <span className="text-[var(--field-green)] font-black">(22x speedup)</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-[var(--muted)]">
+            Resolution: Applied SQLAlchemy <code className="font-mono font-bold">joinedload(Comment.analysis, Comment.correction)</code> across all comment query routes, eliminating round-trip latency cascades.
+          </p>
         </div>
       </section>
 

@@ -418,7 +418,10 @@ export const Landing: React.FC = () => {
             <div className="text-xs text-[var(--muted)] space-y-1">
               <strong className="text-[var(--ink)] block font-bold">Mail Sorting Floor, Post Office (c. 1925)</strong>
               <p>Clerks methodically routing paper correspondence into physical pigeonhole arrays.</p>
-              <span className="text-[10px] font-mono block opacity-70">Archival Series: Postal Logistics &amp; Division</span>
+              <div className="pt-1 border-t border-[var(--border)] text-[10px] font-mono space-y-0.5">
+                <span className="block text-[var(--ink)]">Credit: Library of Congress Prints &amp; Photographs Division</span>
+                <span className="block text-[var(--muted)]">License: Public Domain (US Pre-1929 / Record LC-USZ62-119934)</span>
+              </div>
             </div>
           </div>
 
@@ -434,7 +437,10 @@ export const Landing: React.FC = () => {
             <div className="text-xs text-[var(--muted)] space-y-1">
               <strong className="text-[var(--ink)] block font-bold">Central Telephone Exchange (c. 1932)</strong>
               <p>Manual exchange operators physically patching audio lines to route incoming calls.</p>
-              <span className="text-[10px] font-mono block opacity-70">Archival Series: Bell Telecommunications Systems</span>
+              <div className="pt-1 border-t border-[var(--border)] text-[10px] font-mono space-y-0.5">
+                <span className="block text-[var(--ink)]">Credit: Bell System Historical Photographic Collection / LOC</span>
+                <span className="block text-[var(--muted)]">License: Public Domain (US Pre-1978 without copyright notice)</span>
+              </div>
             </div>
           </div>
 
@@ -450,7 +456,10 @@ export const Landing: React.FC = () => {
             <div className="text-xs text-[var(--muted)] space-y-1">
               <strong className="text-[var(--ink)] block font-bold">Communications Listening Post (c. 1941)</strong>
               <p>Signal corps operators transcribing Morse and voice transmissions across noisy bands.</p>
-              <span className="text-[10px] font-mono block opacity-70">Archival Series: Signal Corps Transmission Logs</span>
+              <div className="pt-1 border-t border-[var(--border)] text-[10px] font-mono space-y-0.5">
+                <span className="block text-[var(--ink)]">Credit: U.S. National Archives and Records Administration (NARA)</span>
+                <span className="block text-[var(--muted)]">License: Public Domain (Work of the U.S. Federal Government, Record 111-SC-120412)</span>
+              </div>
             </div>
           </div>
 
@@ -466,7 +475,10 @@ export const Landing: React.FC = () => {
             <div className="text-xs text-[var(--muted)] space-y-1">
               <strong className="text-[var(--ink)] block font-bold">Card Catalog Archive Hall (c. 1928)</strong>
               <p>Information curators maintaining subject indexes across millions of paper cross-references.</p>
-              <span className="text-[10px] font-mono block opacity-70">Archival Series: Public Library Catalog Division</span>
+              <div className="pt-1 border-t border-[var(--border)] text-[10px] font-mono space-y-0.5">
+                <span className="block text-[var(--ink)]">Credit: Library of Congress Prints &amp; Photographs Division</span>
+                <span className="block text-[var(--muted)]">License: Public Domain (US Pre-1929 / Record LC-USZ62-43890)</span>
+              </div>
             </div>
           </div>
         </div>

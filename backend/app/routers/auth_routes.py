@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -104,9 +104,19 @@ from ..config import Config
 from ..email_service import send_password_reset_email
 
 @auth_router.post("/forgot-password")
-def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
+def forgot_password(data: ForgotPasswordSchema, request: Request, db: Session = Depends(get_db)):
     email = data.email.lower().strip()
     generic_msg = "If an account with that email exists, password reset instructions have been dispatched."
+
+    # Dynamically detect frontend origin from incoming request headers
+    origin = request.headers.get("origin")
+    if not origin and request.headers.get("referer"):
+        from urllib.parse import urlparse
+        p = urlparse(request.headers.get("referer"))
+        if p.scheme and p.netloc:
+            origin = f"{p.scheme}://{p.netloc}"
+
+    frontend_base = (origin or Config.FRONTEND_URL or "https://sentiment-analysis-nine-zeta.vercel.app").rstrip("/")
 
     if email == "demo@tweetsense.io":
         return {
@@ -139,9 +149,9 @@ def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
         db.add(reset_record)
         db.commit()
 
-        # Send email if Resend is configured
+        # Send email if Resend is configured, using the detected frontend base URL
         if Config.RESEND_API_KEY:
-            email_sent = send_password_reset_email(user.email, raw_token)
+            email_sent = send_password_reset_email(user.email, raw_token, frontend_url=frontend_base)
             email_dispatched = email_sent
             # If email was successfully delivered to the user's inbox, suppress the on-screen token
             if email_sent:
@@ -159,7 +169,7 @@ def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
         "data": {
             "email_dispatched": email_dispatched,
             "dev_reset_token": dev_token,
-            "dev_reset_url": f"/reset-password?token={dev_token}" if dev_token else None
+            "dev_reset_url": f"{frontend_base}/reset-password?token={dev_token}" if dev_token else None
         }
     }
 

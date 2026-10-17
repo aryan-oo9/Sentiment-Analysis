@@ -17,7 +17,7 @@ def send_password_reset_email(to_email: str, raw_token: str, frontend_url: str =
         logger.info("RESEND_API_KEY is not configured; email dispatch skipped.")
         return False
 
-    base_frontend = (frontend_url or Config.FRONTEND_URL or "http://localhost:5173").rstrip("/")
+    base_frontend = (frontend_url or Config.FRONTEND_URL or "https://sentiment-analysis-nine-zeta.vercel.app").rstrip("/")
     reset_url = f"{base_frontend}/reset-password?token={raw_token}"
     email_from = Config.EMAIL_FROM or "TweetSense <onboarding@resend.dev>"
 

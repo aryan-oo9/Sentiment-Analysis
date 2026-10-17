@@ -29,7 +29,7 @@ class Config:
         origin.strip()
         for origin in os.getenv(
             "ALLOWED_ORIGINS",
-            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:3000"
+            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:3000,https://sentiment-analysis-nine-zeta.vercel.app"
         ).split(",")
         if origin.strip()
     ]
@@ -52,7 +52,10 @@ class Config:
     # Email / Resend
     RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
     EMAIL_FROM = os.getenv("EMAIL_FROM", "TweetSense <onboarding@resend.dev>")
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    FRONTEND_URL = os.getenv(
+        "FRONTEND_URL",
+        "https://sentiment-analysis-nine-zeta.vercel.app" if os.getenv("RENDER") or os.getenv("FLASK_ENV") == "production" else "http://localhost:5173"
+    )
     
     # Models Paths
     MODEL_PATH = BASE_DIR / "trained_model.sav"

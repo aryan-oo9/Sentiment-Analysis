@@ -106,9 +106,23 @@ from ..email_service import send_password_reset_email
 @auth_router.post("/forgot-password")
 def forgot_password(data: ForgotPasswordSchema, request: Request, db: Session = Depends(get_db)):
     email = data.email.lower().strip()
-    generic_msg = "If an account with that email exists, password reset instructions have been dispatched."
 
-    # Dynamically detect frontend origin from incoming request headers
+    # 1. Check if user exists in database
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with this email address. Please check your email or create a new account."
+        )
+
+    # 2. Guard demo account
+    if email == "demo@tweetsense.io":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The sample demo guest password cannot be modified."
+        )
+
+    # 3. Dynamically detect frontend origin from incoming request headers
     origin = request.headers.get("origin")
     if not origin and request.headers.get("referer"):
         from urllib.parse import urlparse
@@ -118,54 +132,45 @@ def forgot_password(data: ForgotPasswordSchema, request: Request, db: Session = 
 
     frontend_base = (origin or Config.FRONTEND_URL or "https://sentiment-analysis-nine-zeta.vercel.app").rstrip("/")
 
-    if email == "demo@tweetsense.io":
-        return {
-            "status": "success",
-            "message": generic_msg,
-            "data": None
-        }
+    # 4. Invalidate any prior unused reset tokens for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.used == False
+    ).update({"used": True})
 
-    user = db.query(User).filter(User.email == email).first()
+    # 5. Generate secure token
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    reset_record = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+        used=False
+    )
+    db.add(reset_record)
+    db.commit()
+
+    # 6. Dispatch email via Resend
     dev_token = None
     email_dispatched = False
-
-    if user:
-        # Invalidate any prior unused reset tokens for this user
-        db.query(PasswordResetToken).filter(
-            PasswordResetToken.user_id == user.id,
-            PasswordResetToken.used == False
-        ).update({"used": True})
-
-        raw_token = secrets.token_urlsafe(32)
-        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
-
-        reset_record = PasswordResetToken(
-            user_id=user.id,
-            token_hash=token_hash,
-            expires_at=expires_at,
-            used=False
-        )
-        db.add(reset_record)
-        db.commit()
-
-        # Send email if Resend is configured, using the detected frontend base URL
-        if Config.RESEND_API_KEY:
-            email_sent = send_password_reset_email(user.email, raw_token, frontend_url=frontend_base)
-            email_dispatched = email_sent
-            # If email was successfully delivered to the user's inbox, suppress the on-screen token
-            if email_sent:
-                dev_token = None
-            else:
-                # If email dispatch failed (e.g. Resend free-tier sandbox domain restriction), preserve dev_token
-                dev_token = raw_token
+    if Config.RESEND_API_KEY:
+        email_sent = send_password_reset_email(user.email, raw_token, frontend_url=frontend_base)
+        email_dispatched = email_sent
+        # If email was successfully delivered to the user's inbox, suppress the on-screen token
+        if email_sent:
+            dev_token = None
         else:
-            # Fall back to dev mode token for local manual testing
+            # If email dispatch failed (e.g. Resend free-tier sandbox domain restriction), preserve dev_token
             dev_token = raw_token
+    else:
+        # Fall back to dev mode token for local manual testing
+        dev_token = raw_token
 
     return {
         "status": "success",
-        "message": generic_msg,
+        "message": f"Password reset instructions have been dispatched to {user.email}.",
         "data": {
             "email_dispatched": email_dispatched,
             "dev_reset_token": dev_token,

@@ -48,6 +48,11 @@ class Config:
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq" if LLM_API_KEY.startswith("gsk_") else "gemini")
     _default_model = "openai/gpt-oss-20b" if LLM_PROVIDER.lower() == "groq" else "gemini-3-flash-preview"
     LLM_MODEL = os.getenv("LLM_MODEL", _default_model)
+
+    # Email / Resend
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM = os.getenv("EMAIL_FROM", "TweetSense <onboarding@resend.dev>")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
     
     # Models Paths
     MODEL_PATH = BASE_DIR / "trained_model.sav"

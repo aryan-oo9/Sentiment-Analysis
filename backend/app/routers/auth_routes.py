@@ -100,6 +100,9 @@ def demo_session(db: Session = Depends(get_db)):
         }
     }
 
+from ..config import Config
+from ..email_service import send_password_reset_email
+
 @auth_router.post("/forgot-password")
 def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
     email = data.email.lower().strip()
@@ -114,6 +117,8 @@ def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.email == email).first()
     dev_token = None
+    email_dispatched = False
+
     if user:
         # Invalidate any prior unused reset tokens for this user
         db.query(PasswordResetToken).filter(
@@ -134,12 +139,25 @@ def forgot_password(data: ForgotPasswordSchema, db: Session = Depends(get_db)):
         db.add(reset_record)
         db.commit()
 
-        dev_token = raw_token
+        # Send email if Resend is configured
+        if Config.RESEND_API_KEY:
+            email_sent = send_password_reset_email(user.email, raw_token)
+            email_dispatched = email_sent
+            # If email was successfully delivered to the user's inbox, suppress the on-screen token
+            if email_sent:
+                dev_token = None
+            else:
+                # If email dispatch failed (e.g. Resend free-tier sandbox domain restriction), preserve dev_token
+                dev_token = raw_token
+        else:
+            # Fall back to dev mode token for local manual testing
+            dev_token = raw_token
 
     return {
         "status": "success",
         "message": generic_msg,
         "data": {
+            "email_dispatched": email_dispatched,
             "dev_reset_token": dev_token,
             "dev_reset_url": f"/reset-password?token={dev_token}" if dev_token else None
         }

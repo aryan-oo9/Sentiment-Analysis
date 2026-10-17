@@ -17,7 +17,7 @@ from sqlalchemy import or_
 from ..database import get_db
 from ..models import User, Project, Comment, Analysis, Correction, Ticket
 from ..schemas import IngestCommentsSchema, CorrectionSchema, TicketUpdateSchema, PullRequestSchema
-from ..auth import get_current_user
+from ..auth import get_current_user, get_user_project_filter
 from ..ml import ml_engine
 from ..llm import llm_service
 
@@ -57,7 +57,7 @@ def ingest_pasted_comments(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -142,7 +142,7 @@ def import_csv_comments(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -257,7 +257,7 @@ def list_comments(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -341,7 +341,7 @@ def delete_comment(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not comment:
@@ -366,7 +366,7 @@ def submit_correction(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not comment:
@@ -411,7 +411,7 @@ def update_ticket(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not comment:
@@ -453,7 +453,7 @@ def pull_comments_from_source(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:

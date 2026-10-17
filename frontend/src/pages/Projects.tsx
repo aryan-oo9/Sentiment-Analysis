@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { api } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import type { Project } from "../api/types";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { Plus, Trash2, ArrowUpRight } from "lucide-react";
 
 export const Projects: React.FC = () => {
+  useDocumentTitle("Workspaces Hub");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,8 +16,22 @@ export const Projects: React.FC = () => {
   const [newDesc, setNewDesc] = useState("");
   const [neutralBand, setNeutralBand] = useState(0.10);
   const [creating, setCreating] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
+  const { loginDemo } = useAuth();
   const navigate = useNavigate();
+
+  const handleExploreSample = async () => {
+    setDemoLoading(true);
+    try {
+      const data = await loginDemo();
+      navigate(`/app/p/${data.demo_project_id || 1}`);
+    } catch (err: any) {
+      alert(err.message || "Failed to launch sample workspace");
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -66,7 +83,7 @@ export const Projects: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 md:px-8 py-8 space-y-10 w-full">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 space-y-8 md:space-y-10 w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-2 border-[var(--ink)] pb-6">
         <div>
           <span className="text-xs font-bold text-[var(--muted)] block">
@@ -111,12 +128,22 @@ export const Projects: React.FC = () => {
           <p className="text-sm font-semibold text-[var(--muted)]">
             No workspaces created yet. Start by creating a project or loading sample feedback.
           </p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
-          >
-            Create Your First Workspace
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setShowModal(true)}
+              className="bg-[var(--ink)] text-[var(--bg)] px-6 py-2.5 font-bold text-xs hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
+            >
+              Create Your First Workspace
+            </button>
+            <button
+              type="button"
+              onClick={handleExploreSample}
+              disabled={demoLoading}
+              className="border-2 border-[var(--ink)] bg-[var(--surface)] text-[var(--ink)] px-6 py-2.5 font-bold text-xs uppercase hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {demoLoading ? "Opening sample..." : "Explore Sample Workspace"}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -163,8 +190,8 @@ export const Projects: React.FC = () => {
                   </div>
 
                   {/* Right Column: Volume, Sentiment, Action */}
-                  <div className="flex items-center gap-6 self-end md:self-center shrink-0">
-                    <div className="text-right font-mono">
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 self-start sm:self-end md:self-center shrink-0">
+                    <div className="text-left sm:text-right font-mono">
                       <div className="text-sm font-bold text-[var(--ink)]">
                         {project.total_comments || 0}{" "}
                         <span className="text-xs font-normal text-[var(--muted)]">comments</span>
@@ -201,8 +228,8 @@ export const Projects: React.FC = () => {
 
       {/* New Project Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--bg)] border-2 border-[var(--ink)] p-8 max-w-md w-full space-y-6">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-[var(--bg)] border-2 border-[var(--ink)] p-5 sm:p-8 max-w-md w-full space-y-6">
             <h3 className="text-2xl font-black uppercase tracking-tight">Create Workspace</h3>
 
             <form onSubmit={handleCreate} className="space-y-4">

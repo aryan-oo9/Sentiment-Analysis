@@ -2,12 +2,18 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export const SharedReport: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [report, setReport] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useDocumentTitle(
+    error ? "Report Unavailable" : report ? "Executive Report" : "Loading Executive Report...",
+    report?.project_name
+  );
 
   useEffect(() => {
     if (token) {
@@ -58,7 +64,7 @@ export const SharedReport: React.FC = () => {
   const briefing = report.briefing || null;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 md:px-8 py-10 space-y-10 w-full">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 w-full">
       {/* 1. Header Bar */}
       <div className="border-b-2 border-[var(--ink)] pb-6 space-y-2">
         <div className="flex items-center gap-2">
@@ -80,7 +86,7 @@ export const SharedReport: React.FC = () => {
       </div>
 
       {/* 2. Dominant Signal Statement Figure */}
-      <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-8 space-y-4">
+      <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-5 sm:p-6 md:p-8 space-y-4">
         <span className="text-xs font-bold text-[var(--muted)] block">
           Dominant Public Signal
         </span>
@@ -104,21 +110,27 @@ export const SharedReport: React.FC = () => {
         </p>
 
         {/* 3-Class Sentiment Breakdown Strip */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--border)] font-mono text-xs">
-          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-[var(--border)] font-mono text-xs">
+          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
             <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-green)]">Positive</span>
-            <span className="text-base font-bold text-[var(--ink)]">{breakdown.positive_pct}%</span>
-            <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.positive})</span>
+            <div>
+              <span className="text-base font-bold text-[var(--ink)]">{breakdown.positive_pct}%</span>
+              <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.positive})</span>
+            </div>
           </div>
-          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
             <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-coral)]">Negative</span>
-            <span className="text-base font-bold text-[var(--ink)]">{breakdown.negative_pct}%</span>
-            <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.negative})</span>
+            <div>
+              <span className="text-base font-bold text-[var(--ink)]">{breakdown.negative_pct}%</span>
+              <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.negative})</span>
+            </div>
           </div>
-          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+          <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
             <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-yellow)]">Neutral</span>
-            <span className="text-base font-bold text-[var(--ink)]">{breakdown.neutral_pct}%</span>
-            <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.neutral})</span>
+            <div>
+              <span className="text-base font-bold text-[var(--ink)]">{breakdown.neutral_pct}%</span>
+              <span className="text-[10px] text-[var(--muted)] ml-1">({breakdown.neutral})</span>
+            </div>
           </div>
         </div>
       </div>
@@ -126,9 +138,9 @@ export const SharedReport: React.FC = () => {
       {/* 3. Sentiment Trajectory Area Chart */}
       {dailyTrends.length > 0 && (
         <div className="space-y-4">
-          <div className="flex justify-between items-baseline border-b border-[var(--border)] pb-2">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-baseline gap-2 border-b border-[var(--border)] pb-2">
             <h2 className="text-xl font-black uppercase tracking-tight">Sentiment Trajectory</h2>
-            <div className="flex gap-4 text-xs font-bold">
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-xs font-bold">
               <span className="text-[var(--field-green)]">&bull; Positive</span>
               <span className="text-[var(--field-coral)]">&bull; Negative</span>
               <span className="text-[var(--field-yellow)]">&bull; Neutral</span>

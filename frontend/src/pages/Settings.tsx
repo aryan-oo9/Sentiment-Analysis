@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router";
+import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import type { Project } from "../api/types";
-import { Copy, Save } from "lucide-react";
+import { Copy, Save, ArrowLeft } from "lucide-react";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export const Settings: React.FC = () => {
   const { projectId } = useParams();
@@ -16,16 +17,25 @@ export const Settings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useDocumentTitle(
+    error ? "Settings Unavailable" : project ? "Project Settings" : "Project Settings",
+    project?.name
+  );
 
   useEffect(() => {
     if (id) {
+      setError(null);
       api.getProject(id).then((p) => {
         setProject(p);
         setName(p.name);
         setDescription(p.description || "");
         setNeutralBand(p.neutral_band);
         setShareToken(p.share_token);
-      }).catch(console.error);
+      }).catch((err: any) => {
+        setError(err.message || "Failed to load project settings");
+      });
     }
   }, [id]);
 
@@ -65,12 +75,44 @@ export const Settings: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (error && !project) {
+    const isNotFound = error.toLowerCase().includes("not found") || error.toLowerCase().includes("forbidden");
+    return (
+      <div className="p-6 md:p-8 max-w-xl mx-auto my-16 border-2 border-[var(--ink)] bg-[var(--surface)] space-y-6 shadow-[6px_6px_0px_var(--ink)]">
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <span className="bg-[var(--field-coral)] text-white text-[11px] font-mono font-bold px-2 py-0.5 uppercase">
+            {isNotFound ? "Error 404 / Access Denied" : "Error"}
+          </span>
+          <span className="font-mono text-xs text-[var(--muted)]">Workspace #{id}</span>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-[var(--ink)]">
+            {isNotFound ? "Workspace Not Found or Access Denied" : "Settings Unavailable"}
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed">
+            {isNotFound
+              ? "The requested workspace does not exist or you do not have permission to access it. Direct URL modification without authorized tenancy is restricted."
+              : error}
+          </p>
+        </div>
+        <div className="pt-2 border-t border-[var(--border)] flex flex-wrap gap-3">
+          <Link
+            to="/app"
+            className="bg-[var(--ink)] text-[var(--bg)] px-5 py-2.5 font-bold text-xs uppercase hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} /> Back to Workspaces
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!project) {
     return <div className="p-8 text-xs font-semibold text-[var(--muted)]">Loading settings...</div>;
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-10 w-full">
+    <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto space-y-8 md:space-y-10 w-full">
       <div className="border-b-2 border-[var(--ink)] pb-6">
         <span className="text-xs font-bold text-[var(--muted)] block">
           Configuration
@@ -114,8 +156,8 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* The Neutral Band Knob */}
-        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4">
-          <div className="flex justify-between items-baseline">
+        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-baseline gap-2">
             <div>
               <span className="text-xs font-bold block">
                 Neutral polarity band

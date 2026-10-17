@@ -8,6 +8,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  setSession: (token: string, user: User) => void;
+  loginDemo: () => Promise<{ token: string; user: User; demo_project_id: number | null }>;
   logout: () => void;
 }
 
@@ -61,6 +63,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(data.user);
   };
 
+  const setSession = (newToken: string, newUser: User) => {
+    api.setToken(newToken);
+    setToken(newToken);
+    setUser(newUser);
+  };
+
+  const loginDemo = async () => {
+    const data = await api.demoSession();
+    api.setToken(data.token);
+    setToken(data.token);
+    setUser(data.user);
+    return data;
+  };
+
   const logout = () => {
     api.setToken(null);
     setToken(null);
@@ -68,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, setSession, loginDemo, logout }}>
       {children}
     </AuthContext.Provider>
   );

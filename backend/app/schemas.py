@@ -11,6 +11,13 @@ class LoginSchema(BaseModel):
     email: str = Field(..., pattern=EMAIL_REGEX, description="Valid email address")
     password: str
 
+class ForgotPasswordSchema(BaseModel):
+    email: str = Field(..., pattern=EMAIL_REGEX, description="Valid email address")
+
+class ResetPasswordSchema(BaseModel):
+    token: str = Field(..., min_length=16, description="Cryptographic reset token")
+    new_password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+
 class ProjectCreateSchema(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(default="", max_length=500)

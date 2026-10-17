@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import User, Comment, Project, ReplyDraft
 from ..schemas import ReplyDraftRequestSchema, ReplyDraftUpdateSchema
-from ..auth import get_current_user
+from ..auth import get_current_user, get_user_project_filter
 from ..llm import llm_service
 
 llm_router = APIRouter(prefix="/api", tags=["llm"])
@@ -35,7 +35,7 @@ def create_reply_draft(
 ):
     comment = db.query(Comment).join(Project).filter(
         Comment.id == comment_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not comment:
@@ -117,7 +117,7 @@ def update_reply_draft(
 
     draft = db.query(ReplyDraft).join(Comment).join(Project).filter(
         ReplyDraft.id == draft_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not draft:

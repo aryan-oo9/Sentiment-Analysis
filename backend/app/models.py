@@ -19,6 +19,7 @@ class User(Base):
 
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
     corrections = relationship("Correction", back_populates="user")
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -160,3 +161,15 @@ class Job(Base):
     created_at = Column(DateTime, default=utcnow, nullable=False)
 
     project = relationship("Project", back_populates="jobs")
+ 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=utcnow, nullable=False)
+
+    user = relationship("User", back_populates="password_reset_tokens")

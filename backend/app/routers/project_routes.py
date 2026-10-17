@@ -10,7 +10,7 @@ from sqlalchemy import func
 from ..database import get_db
 from ..models import User, Project, Comment, Analysis, Correction
 from ..schemas import ProjectCreateSchema, ProjectUpdateSchema
-from ..auth import get_current_user
+from ..auth import get_current_user, get_user_project_filter
 
 project_router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -33,7 +33,7 @@ class ShareToggleSchema(BaseModel):
 @project_router.get("")
 def list_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     projects = db.query(Project).filter(
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).order_by(Project.created_at.desc()).all()
 
     out = []
@@ -93,7 +93,7 @@ def create_project(data: ProjectCreateSchema, current_user: User = Depends(get_c
 def get_project(project_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -120,7 +120,7 @@ def get_project(project_id: int, current_user: User = Depends(get_current_user),
 def update_project(project_id: int, data: ProjectUpdateSchema, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -163,7 +163,7 @@ def update_project(project_id: int, data: ProjectUpdateSchema, current_user: Use
 def delete_project(project_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -186,7 +186,7 @@ def delete_project(project_id: int, current_user: User = Depends(get_current_use
 def toggle_share_token(project_id: int, body: ShareToggleSchema = ShareToggleSchema(), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -227,7 +227,7 @@ def export_project_csv(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:

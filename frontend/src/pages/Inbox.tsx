@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import type { CommentItem, Project } from "../api/types";
-import { Search, Copy, X } from "lucide-react";
+import { Search, Copy, X, ArrowLeft } from "lucide-react";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export const Inbox: React.FC = () => {
   const { projectId } = useParams();
@@ -28,10 +29,17 @@ export const Inbox: React.FC = () => {
   const [draftError, setDraftError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
+
+  useDocumentTitle(
+    error ? "Inbox Unavailable" : project ? "Triage Inbox" : "Triage Inbox",
+    project?.name
+  );
 
   const fetchComments = async () => {
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     try {
       const data = await api.getComments(id, {
         page,
@@ -45,6 +53,7 @@ export const Inbox: React.FC = () => {
       setTotalPages(data.pagination.total_pages);
     } catch (err: any) {
       console.error("Failed to fetch comments:", err);
+      setErrorCode(err.status || (err.message?.includes("404") || err.message?.includes("not found") ? 404 : null));
       setError(err.message || "Failed to load feedback comments.");
     } finally {
       setLoading(false);
@@ -54,7 +63,9 @@ export const Inbox: React.FC = () => {
   useEffect(() => {
     if (id) {
       fetchComments();
-      api.getProject(id).then(setProject).catch(console.error);
+      api.getProject(id).then(setProject).catch((err: any) => {
+        setErrorCode(err.status || (err.message?.includes("404") || err.message?.includes("not found") ? 404 : null));
+      });
     }
   }, [id, page, sentimentFilter, priorityFilter]);
 
@@ -165,6 +176,46 @@ export const Inbox: React.FC = () => {
     });
   };
 
+  if (error && !project && comments.length === 0) {
+    const isNotFound = errorCode === 404 || error.toLowerCase().includes("not found") || error.toLowerCase().includes("forbidden");
+    return (
+      <div className="p-6 md:p-8 max-w-xl mx-auto my-16 border-2 border-[var(--ink)] bg-[var(--surface)] space-y-6 shadow-[6px_6px_0px_var(--ink)]">
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <span className="bg-[var(--field-coral)] text-white text-[11px] font-mono font-bold px-2 py-0.5 uppercase">
+            {isNotFound ? "Error 404 / Access Denied" : "Connection Interrupted"}
+          </span>
+          <span className="font-mono text-xs text-[var(--muted)]">Workspace #{id}</span>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-[var(--ink)]">
+            {isNotFound ? "Workspace Not Found or Access Denied" : "Connection Interrupted"}
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed">
+            {isNotFound
+              ? "The requested workspace does not exist or you do not have permission to access it. Direct URL modification without authorized tenancy is restricted."
+              : error}
+          </p>
+        </div>
+        <div className="pt-2 border-t border-[var(--border)] flex flex-wrap gap-3">
+          <Link
+            to="/app"
+            className="bg-[var(--ink)] text-[var(--bg)] px-5 py-2.5 font-bold text-xs uppercase hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} /> Back to Workspaces
+          </Link>
+          {!isNotFound && (
+            <button
+              onClick={fetchComments}
+              className="border-2 border-[var(--ink)] bg-[var(--bg)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--surface)] transition-colors cursor-pointer"
+            >
+              Retry Connection
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8 w-full">
       {/* Sample Project Read-Only Banner */}
@@ -189,7 +240,7 @@ export const Inbox: React.FC = () => {
 
       {/* Title & Filter Bar */}
       <div className="space-y-4 border-b-2 border-[var(--ink)] pb-6">
-        <div className="flex justify-between items-baseline">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-4">
           <div>
             <span className="text-xs font-bold text-[var(--muted)] block">
               Feedback Operations
@@ -199,20 +250,20 @@ export const Inbox: React.FC = () => {
             </h1>
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-            <div className="relative">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search feedback..."
-                className="bg-[var(--surface)] border border-[var(--ink)] pl-8 pr-3 py-1.5 text-xs w-48 md:w-64 focus:outline-none"
+                className="bg-[var(--surface)] border border-[var(--ink)] pl-8 pr-3 py-1.5 text-xs w-full sm:w-48 md:w-64 focus:outline-none"
               />
               <Search size={14} className="absolute left-2.5 top-2 text-[var(--muted)]" />
             </div>
             <button
               type="submit"
-              className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold uppercase"
+              className="bg-[var(--ink)] text-[var(--bg)] px-3 py-1.5 text-xs font-bold uppercase shrink-0 cursor-pointer"
             >
               Filter
             </button>
@@ -220,8 +271,8 @@ export const Inbox: React.FC = () => {
         </div>
 
         {/* Quiet Filter Controls */}
-        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
-          <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-semibold">
+          <div className="flex flex-wrap items-center gap-1">
             <span className="text-[var(--muted)] uppercase">Sentiment:</span>
             {["all", "Positive", "Negative", "Neutral"].map((s) => (
               <button
@@ -241,7 +292,7 @@ export const Inbox: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <span className="text-[var(--muted)] uppercase">Priority:</span>
             {["all", "High Priority", "Medium Priority", "Low Priority"].map((p) => (
               <button
@@ -288,7 +339,7 @@ export const Inbox: React.FC = () => {
         </div>
       ) : (
         <div className="border-2 border-[var(--ink)] bg-[var(--surface)] overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[580px] text-left text-xs border-collapse">
             <thead>
               <tr className="border-b-2 border-[var(--ink)] bg-[var(--bg)] font-bold text-xs">
                 <th className="p-3 w-32 text-center">Verdict</th>
@@ -412,7 +463,7 @@ export const Inbox: React.FC = () => {
       {/* Comment Detail Slide-Over Drawer */}
       {selectedComment && (
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
-          <div className="bg-[var(--bg)] border-l-4 border-[var(--ink)] w-full max-w-xl h-full overflow-y-auto p-8 space-y-8 flex flex-col justify-between">
+          <div className="bg-[var(--bg)] border-l-4 border-[var(--ink)] w-full max-w-xl h-full overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 flex flex-col justify-between">
             <div className="space-y-6">
               <div className="flex justify-between items-start border-b border-[var(--border)] pb-4">
                 <div>

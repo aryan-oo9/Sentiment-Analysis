@@ -1,18 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router";
 import { api } from "../api/client";
 import type { Project, ProjectStats, ExecutiveBriefing, ThemeItem } from "../api/types";
-import { Plus, AlertTriangle, Download, Globe } from "lucide-react";
+import { Plus, AlertTriangle, Download, Globe, ArrowLeft } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
+import { useTour } from "../components/tour/TourContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export const ProjectDashboard: React.FC = () => {
   const { projectId } = useParams();
   const id = Number(projectId);
+  const { startTour, hasSeenTour } = useTour();
+  const hasAutoStartedRef = useRef(false);
 
   const [project, setProject] = useState<Project | null>(null);
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [briefing, setBriefing] = useState<ExecutiveBriefing | null>(null);
   const [themes, setThemes] = useState<ThemeItem[]>([]);
+  const [customWordcloud, setCustomWordcloud] = useState<string | null>(null);
+  const wordcloudContainerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
 
   // Ingestion Modal State
@@ -26,10 +32,17 @@ export const ProjectDashboard: React.FC = () => {
   const [ingesting, setIngesting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
+
+  useDocumentTitle(
+    error ? "Workspace Unavailable" : project ? "Overview" : "Loading Workspace...",
+    project?.name
+  );
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     try {
       const [projData, statsData, themesData] = await Promise.all([
         api.getProject(id),
@@ -46,6 +59,7 @@ export const ProjectDashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Dashboard load failed:", err);
+      setErrorCode(err.status || (err.message?.includes("404") || err.message?.includes("not found") ? 404 : null));
       setError(err.message || "Failed to load dashboard data. The server may be waking up.");
     } finally {
       setLoading(false);
@@ -55,6 +69,51 @@ export const ProjectDashboard: React.FC = () => {
   useEffect(() => {
     if (id) loadData();
   }, [id]);
+
+  // First-time visitor onboarding tour auto-launch
+  useEffect(() => {
+    if (!loading && project && stats && !hasSeenTour && !hasAutoStartedRef.current) {
+      hasAutoStartedRef.current = true;
+      const timer = setTimeout(() => {
+        startTour(0);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, project, stats, hasSeenTour, startTour]);
+
+  useEffect(() => {
+    if (!id || !stats?.total_comments) return;
+
+    const el = wordcloudContainerRef.current;
+    if (!el) return;
+
+    let timeoutId: any;
+    const updateDimensions = () => {
+      const rect = el.getBoundingClientRect();
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+      if (w > 100 && h > 100) {
+        api.getProjectWordcloud(id, Math.round(w * 1.5), Math.round(h * 1.5))
+          .then((res) => {
+            if (res?.wordcloud) setCustomWordcloud(res.wordcloud);
+          })
+          .catch(console.error);
+      }
+    };
+
+    updateDimensions();
+
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateDimensions, 400);
+    });
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+    };
+  }, [id, stats?.total_comments]);
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,18 +167,43 @@ export const ProjectDashboard: React.FC = () => {
   };
 
 
-  // Error State with Retry
+  // Error State with BOLA / Not Found resilience
   if (error && (!project || !stats)) {
+    const isNotFound = errorCode === 404 || error.toLowerCase().includes("not found") || error.toLowerCase().includes("forbidden");
     return (
-      <div className="p-8 max-w-xl mx-auto my-16 border-2 border-[var(--field-coral)] bg-[var(--surface)] text-center space-y-4">
-        <h2 className="text-xl font-bold text-[var(--ink)]">Connection Interrupted</h2>
-        <p className="text-xs text-[var(--muted)]">{error}</p>
-        <button
-          onClick={loadData}
-          className="bg-[var(--ink)] text-[var(--bg)] px-5 py-2 font-bold text-xs hover:bg-[var(--field-coral)] hover:text-white transition-colors cursor-pointer"
-        >
-          Retry Connection
-        </button>
+      <div className="p-6 md:p-8 max-w-xl mx-auto my-16 border-2 border-[var(--ink)] bg-[var(--surface)] space-y-6 shadow-[6px_6px_0px_var(--ink)]">
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <span className="bg-[var(--field-coral)] text-white text-[11px] font-mono font-bold px-2 py-0.5 uppercase">
+            {isNotFound ? "Error 404 / Access Denied" : "Connection Interrupted"}
+          </span>
+          <span className="font-mono text-xs text-[var(--muted)]">Workspace #{id}</span>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase tracking-tight text-[var(--ink)]">
+            {isNotFound ? "Workspace Not Found or Access Denied" : "Connection Interrupted"}
+          </h2>
+          <p className="text-xs sm:text-sm text-[var(--muted)] leading-relaxed">
+            {isNotFound
+              ? "The requested workspace does not exist or you do not have permission to access it. Direct URL modification without authorized tenancy is restricted."
+              : error}
+          </p>
+        </div>
+        <div className="pt-2 border-t border-[var(--border)] flex flex-wrap gap-3">
+          <Link
+            to="/app"
+            className="bg-[var(--ink)] text-[var(--bg)] px-5 py-2.5 font-bold text-xs uppercase hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors flex items-center gap-1.5"
+          >
+            <ArrowLeft size={14} /> Back to Workspaces
+          </Link>
+          {!isNotFound && (
+            <button
+              onClick={loadData}
+              className="border-2 border-[var(--ink)] bg-[var(--bg)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--surface)] transition-colors cursor-pointer"
+            >
+              Retry Connection
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -176,21 +260,15 @@ export const ProjectDashboard: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            to={`/app/p/${id}/inbox`}
-            className="border-2 border-[var(--ink)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--surface)] transition-colors"
-          >
-            Open Triage Inbox
-          </Link>
+        <div data-tour="tour-actions" className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={handleExportCsv}
             disabled={exporting}
-            className="border-2 border-[var(--ink)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--surface)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="border-2 border-[var(--ink)] bg-[var(--surface)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--ink)] hover:text-[var(--bg)] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
             title="Download CSV export with sanitized cells"
           >
+            <span>{exporting ? "Exporting..." : "Export CSV"}</span>
             <Download size={14} />
-            {exporting ? "Exporting..." : "Export CSV"}
           </button>
           <button
             onClick={() => {
@@ -200,9 +278,10 @@ export const ProjectDashboard: React.FC = () => {
               }
               setShowIngest(true);
             }}
-            className="flex items-center gap-2 bg-[var(--ink)] text-[var(--bg)] px-5 py-2 font-bold text-xs uppercase hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors cursor-pointer"
+            className="border-2 border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] px-4 py-2 font-bold text-xs uppercase hover:bg-[var(--field-green)] hover:text-[var(--accent-ink)] transition-colors flex items-center gap-2 cursor-pointer whitespace-nowrap"
           >
-            <Plus size={16} /> Ingest Feedback
+            <span>Ingest Feedback</span>
+            <Plus size={16} />
           </button>
         </div>
       </div>
@@ -228,7 +307,7 @@ export const ProjectDashboard: React.FC = () => {
       )}
 
       {/* 3. Big Statement Figure */}
-      <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-8 space-y-4">
+      <div data-tour="tour-signal" className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 md:p-8 space-y-4">
         <span className="text-xs font-bold text-[var(--muted)] block">
           Dominant Public Signal
         </span>
@@ -252,21 +331,27 @@ export const ProjectDashboard: React.FC = () => {
         </p>
 
         {stats.total_comments > 0 && (
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--border)] font-mono text-xs">
-            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-[var(--border)] font-mono text-xs">
+            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
               <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-green)]">Positive</span>
-              <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.positive_pct}%</span>
-              <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.positive})</span>
+              <div>
+                <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.positive_pct}%</span>
+                <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.positive})</span>
+              </div>
             </div>
-            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
               <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-coral)]">Negative</span>
-              <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.negative_pct}%</span>
-              <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.negative})</span>
+              <div>
+                <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.negative_pct}%</span>
+                <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.negative})</span>
+              </div>
             </div>
-            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)]">
+            <div className="p-2.5 bg-[var(--bg)] border border-[var(--border)] flex sm:block justify-between items-center">
               <span className="block font-sans text-[10px] font-bold uppercase text-[var(--field-yellow)]">Neutral</span>
-              <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.neutral_pct}%</span>
-              <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.neutral})</span>
+              <div>
+                <span className="text-base font-bold text-[var(--ink)]">{stats.sentiment_breakdown.neutral_pct}%</span>
+                <span className="text-[10px] text-[var(--muted)] ml-1">({stats.sentiment_breakdown.neutral})</span>
+              </div>
             </div>
           </div>
         )}
@@ -285,9 +370,9 @@ export const ProjectDashboard: React.FC = () => {
       {/* 4. Full-width Flat Area Chart of Daily Sentiment */}
       {stats.daily_trends.length > 0 && (
         <div className="space-y-4">
-          <div className="flex justify-between items-baseline border-b border-[var(--border)] pb-2">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-baseline gap-2 border-b border-[var(--border)] pb-2">
             <h2 className="text-xl font-black uppercase tracking-tight">Sentiment Trajectory</h2>
-            <div className="flex gap-4 text-xs font-bold">
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-xs font-bold">
               <span className="text-[var(--field-green)]">&bull; Positive</span>
               <span className="text-[var(--field-coral)]">&bull; Negative</span>
               <span className="text-[var(--field-yellow)]">&bull; Neutral</span>
@@ -318,7 +403,7 @@ export const ProjectDashboard: React.FC = () => {
       )}
 
       {/* 5. Decimal-Aligned Telemetry & Metrics Ledger */}
-      <div className="space-y-4">
+      <div data-tour="tour-telemetry" className="space-y-4">
         <h2 className="text-xl font-black uppercase tracking-tight border-b-2 border-[var(--ink)] pb-2">
           Telemetry &amp; Metrics Ledger
         </h2>
@@ -425,13 +510,13 @@ export const ProjectDashboard: React.FC = () => {
       )}
 
       {/* 8. Top Driving Keywords / Cloud */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4">
+      <div data-tour="tour-lexical" className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4 flex flex-col">
           <h3 className="text-sm font-bold border-b border-[var(--border)] pb-2">Top Driving Keywords</h3>
           {stats.top_keywords.length === 0 ? (
             <p className="text-xs text-[var(--muted)]">No keyword frequency data available yet.</p>
           ) : (
-            <div className="divide-y divide-[var(--border)] font-mono text-xs">
+            <div className="divide-y divide-[var(--border)] font-mono text-xs flex-1">
               {stats.top_keywords.map((kw, i) => (
                 <div key={i} className="flex justify-between py-2">
                   <span className="font-bold">{kw.word}</span>
@@ -442,12 +527,18 @@ export const ProjectDashboard: React.FC = () => {
           )}
         </div>
 
-        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4 flex flex-col justify-between">
-          <h3 className="text-sm font-bold border-b border-[var(--border)] pb-2">Lexical Distribution</h3>
+        <div className="border-2 border-[var(--ink)] bg-[var(--surface)] p-6 space-y-4 flex flex-col">
+          <h3 className="text-sm font-bold border-b border-[var(--border)] pb-2 uppercase tracking-wider">Lexical Distribution</h3>
           {stats.wordcloud ? (
-            <img src={stats.wordcloud} alt="Word Cloud" className="w-full object-contain max-h-56 border border-[var(--border)]" />
+            <div ref={wordcloudContainerRef} className="flex-1 w-full min-h-[360px] overflow-hidden flex items-center justify-center">
+              <img
+                src={customWordcloud || stats.wordcloud}
+                alt="Word Cloud"
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
-            <div className="h-48 border border-dashed border-[var(--border)] flex items-center justify-center text-xs text-[var(--muted)]">
+            <div className="flex-1 min-h-[360px] border border-dashed border-[var(--border)] flex items-center justify-center text-xs text-[var(--muted)]">
               Word cloud generated when comments are ingested
             </div>
           )}
@@ -456,29 +547,29 @@ export const ProjectDashboard: React.FC = () => {
 
       {/* Ingestion Modal */}
       {showIngest && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--bg)] border-2 border-[var(--ink)] p-6 sm:p-8 max-w-lg w-full space-y-6">
-            <div className="flex justify-between items-center border-b border-[var(--border)] pb-4">
-              <h3 className="text-2xl font-black uppercase tracking-tight">Ingest Feedback</h3>
-              <div className="flex gap-2 text-xs font-bold">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-[var(--bg)] border-2 border-[var(--ink)] p-4 sm:p-6 md:p-8 max-w-lg w-full space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-[var(--border)] pb-4">
+              <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Ingest Feedback</h3>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setIngestMode("paste")}
-                  className={`px-3 py-1 cursor-pointer ${ingestMode === "paste" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
+                  className={`px-2.5 py-1 cursor-pointer ${ingestMode === "paste" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
                 >
                   Paste Text
                 </button>
                 <button
                   type="button"
                   onClick={() => setIngestMode("csv")}
-                  className={`px-3 py-1 cursor-pointer ${ingestMode === "csv" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
+                  className={`px-2.5 py-1 cursor-pointer ${ingestMode === "csv" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
                 >
                   Upload CSV
                 </button>
                 <button
                   type="button"
                   onClick={() => setIngestMode("hn")}
-                  className={`px-3 py-1 cursor-pointer flex items-center gap-1 ${ingestMode === "hn" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
+                  className={`px-2.5 py-1 cursor-pointer flex items-center gap-1 ${ingestMode === "hn" ? "bg-[var(--ink)] text-[var(--bg)]" : "bg-[var(--surface)]"}`}
                 >
                   <Globe size={12} /> Hacker News
                 </button>

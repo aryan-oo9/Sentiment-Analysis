@@ -92,17 +92,19 @@ class MLEngine:
             "model_version": "v2.0-linear"
         }
 
-    def generate_wordcloud(self, text: str) -> str:
+    def generate_wordcloud(self, text: str, width: int = 800, height: int = 500) -> str:
         try:
             if not text or len(text.strip()) < 3:
                 return ""
+            w = max(200, min(1600, int(width)))
+            h = max(200, min(1600, int(height)))
             wc = WordCloud(
-                width=480,
-                height=240,
+                width=w,
+                height=h,
                 background_color="#dcd5c5",
                 colormap="Dark2",
                 stopwords=None,
-                max_words=60
+                max_words=80
             ).generate(text)
             
             buf = BytesIO()

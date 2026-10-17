@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 
 from .config import Config
 from .database import get_db
-from .models import User
+from .models import User, Project
+
+def get_user_project_filter(current_user: User):
+    if current_user.email == "demo@tweetsense.io":
+        return (Project.user_id == current_user.id) | (Project.is_demo == True)
+    return (Project.user_id == current_user.id) & (Project.is_demo == False)
 
 security = HTTPBearer(auto_error=False)
 

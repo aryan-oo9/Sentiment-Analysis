@@ -48,7 +48,9 @@ class ApiClient {
         this.setToken(null);
         window.dispatchEvent(new CustomEvent("tweetsense:unauthorized"));
       }
-      throw new Error(json.message || `Request failed with status ${res.status}`);
+      const err: any = new Error(json.message || `Request failed with status ${res.status}`);
+      err.status = res.status;
+      throw err;
     }
 
     return json.data;
@@ -76,6 +78,20 @@ class ApiClient {
   async demoSession() {
     return this.request<{ token: string; user: any; demo_project_id: number | null }>("/api/auth/demo-session", {
       method: "POST",
+    });
+  }
+
+  async forgotPassword(email: string) {
+    return this.request<{ dev_reset_token?: string; dev_reset_url?: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(body: { token: string; new_password: string }) {
+    return this.request<{ email: string }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(body),
     });
   }
 
@@ -170,8 +186,16 @@ class ApiClient {
   }
 
   // Insights
-  async getProjectStats(projectId: number) {
-    return this.request<any>(`/api/projects/${projectId}/stats`, { method: "GET" });
+  async getProjectStats(projectId: number, width?: number, height?: number) {
+    const params = width && height ? `?width=${width}&height=${height}` : "";
+    return this.request<any>(`/api/projects/${projectId}/stats${params}`, { method: "GET" });
+  }
+
+  async getProjectWordcloud(projectId: number, width: number, height: number) {
+    return this.request<{ wordcloud: string }>(
+      `/api/projects/${projectId}/wordcloud?width=${width}&height=${height}`,
+      { method: "GET" }
+    );
   }
 
   async getProjectThemes(projectId: number) {

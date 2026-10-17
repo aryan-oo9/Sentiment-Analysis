@@ -7,21 +7,25 @@ from sqlalchemy import func
 
 from ..database import get_db
 from ..models import User, Project, Comment, Analysis, Correction, Theme
-from ..auth import get_current_user
+from ..auth import get_current_user, get_user_project_filter
 from ..ml import ml_engine
 from ..llm import llm_service
+
+from typing import Optional
 
 insight_router = APIRouter(prefix="/api/projects", tags=["insights"])
 
 @insight_router.get("/{project_id}/stats")
 def get_project_stats(
     project_id: int,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -136,7 +140,9 @@ def get_project_stats(
 
     # Generate wordcloud
     combined_text = " ".join([c.text for c in comments[:100]])
-    wordcloud_b64 = ml_engine.generate_wordcloud(combined_text)
+    wc_w = width if width and width >= 200 else 600
+    wc_h = height if height and height >= 200 else 550
+    wordcloud_b64 = ml_engine.generate_wordcloud(combined_text, width=wc_w, height=wc_h)
 
     return {
         "status": "success",
@@ -167,6 +173,37 @@ def get_project_stats(
         }
     }
 
+@insight_router.get("/{project_id}/wordcloud")
+def get_project_wordcloud(
+    project_id: int,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        get_user_project_filter(current_user)
+    ).first()
+
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    comments = (
+        db.query(Comment.text)
+        .filter(Comment.project_id == project.id)
+        .limit(150)
+        .all()
+    )
+    if not comments:
+        return {"status": "success", "data": {"wordcloud": ""}}
+
+    combined_text = " ".join([c[0] for c in comments if c[0]])
+    w = max(200, min(1600, width)) if width else 600
+    h = max(200, min(1600, height)) if height else 550
+    wordcloud_b64 = ml_engine.generate_wordcloud(combined_text, width=w, height=h)
+    return {"status": "success", "data": {"wordcloud": wordcloud_b64}}
+
 @insight_router.post("/{project_id}/briefing")
 def get_executive_briefing(
     project_id: int,
@@ -175,7 +212,7 @@ def get_executive_briefing(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:
@@ -228,7 +265,7 @@ def get_project_themes(
 ):
     project = db.query(Project).filter(
         Project.id == project_id,
-        (Project.user_id == current_user.id) | (Project.is_demo == True)
+        get_user_project_filter(current_user)
     ).first()
 
     if not project:

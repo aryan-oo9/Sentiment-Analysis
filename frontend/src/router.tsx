@@ -10,6 +10,8 @@ import { Projects } from "./pages/Projects";
 import { ProjectDashboard } from "./pages/ProjectDashboard";
 import { Inbox } from "./pages/Inbox";
 import { Settings } from "./pages/Settings";
+import { NotFound } from "./pages/NotFound";
+import { ResetPassword } from "./pages/ResetPassword";
 
 export const router = createBrowserRouter([
   {
@@ -17,9 +19,11 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Landing },
       { path: "login", Component: Login },
+      { path: "reset-password", Component: ResetPassword },
       { path: "model", Component: ModelCard },
       { path: "model-card", Component: ModelCard },
       { path: "r/:token", Component: SharedReport },
+      { path: "*", Component: NotFound },
     ],
   },
   {
